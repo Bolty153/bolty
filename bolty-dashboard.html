@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bolty — Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:#13111c; --ink-2:#3a3650; --ink-soft:#6b6880; --ink-faint:#a6a3b8;
+    --bg:#f7f6fb; --surf:#ffffff; --surf-2:#f1eff8;
+    --line:#e8e5f2; --line-2:#ddd9ec;
+    --volt:#6029ff; --volt-2:#8b5cff; --volt-ink:#3a1b9e; --volt-wash:#efe9ff;
+    --mint:#00c896; --mint-wash:#dcf7ee;
+    --amber:#ff9500; --amber-wash:#fff0d6;
+    --rose:#ff3d71; --rose-wash:#ffe3ec;
+    --rl:22px; --rm:15px; --rs:11px;
+    --sh-s:0 1px 3px rgba(19,17,28,.05); --sh-m:0 6px 24px rgba(19,17,28,.07); --sh-volt:0 8px 28px rgba(96,41,255,.22);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',system-ui,sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3,h4,h5,.disp { font-family:'Space Grotesk',sans-serif; letter-spacing:-.02em; }
+
+  /* ===== Top bar (global brand) ===== */
+  .topnav { height:62px; background:var(--surf); border-bottom:1px solid var(--line); display:flex; align-items:center; padding:0 22px; gap:18px; position:sticky; top:0; z-index:50; }
+  .brand { display:flex; align-items:center; gap:10px; padding-right:20px; border-right:1px solid var(--line); height:100%; }
+  .brand-logo { width:42px; height:42px; border-radius:11px; background:linear-gradient(135deg,#6029ff,#8b5cff); display:flex; align-items:center; justify-content:center; box-shadow:var(--sh-volt); position:relative; overflow:hidden; }
+  .brand-logo svg { width:30px; height:30px; position:relative; z-index:1; }
+  .brand-logo::after { content:""; position:absolute; inset:0; background:radial-gradient(circle at 70% 20%, rgba(255,255,255,.4), transparent 60%); }
+  .brand-txt { line-height:1; }
+  .brand-txt .n { font-family:'Space Grotesk'; font-weight:700; font-size:20px; color:var(--ink); }
+  .brand-txt .f { font-size:8px; font-weight:600; letter-spacing:.02em; color:var(--ink-faint); text-transform:uppercase; margin-top:2px; white-space:nowrap; }
+  .brand-txt .f b { color:var(--ink-2); font-weight:700; }
+  .topnav-search { flex:1; max-width:340px; display:flex; align-items:center; gap:9px; background:var(--surf-2); border:1px solid transparent; border-radius:11px; padding:9px 13px; color:var(--ink-faint); font-size:13.5px; cursor:text; transition:all .15s; }
+  .topnav-search:hover { border-color:var(--line-2); }
+  .topnav-search svg { width:16px; height:16px; }
+  .topnav-right { margin-left:auto; display:flex; align-items:center; gap:14px; }
+  .icon-btn { width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:var(--surf); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-soft); position:relative; transition:all .15s; }
+  .icon-btn:hover { background:var(--surf-2); color:var(--ink); }
+  .icon-btn svg { width:18px; height:18px; }
+  .icon-btn .badge { position:absolute; top:-4px; right:-4px; min-width:17px; height:17px; border-radius:9px; background:var(--rose); color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; padding:0 4px; border:2px solid var(--surf); }
+  .acct { display:flex; align-items:center; gap:9px; padding:5px 6px 5px 5px; border:1px solid var(--line); border-radius:30px; cursor:pointer; transition:all .15s; }
+  .acct:hover { background:var(--surf-2); }
+  .acct-av { width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,var(--mint),#00a378); color:#fff; font-size:12px; font-weight:700; font-family:'Space Grotesk'; display:flex; align-items:center; justify-content:center; }
+  .acct-n { font-size:13px; font-weight:600; padding-right:4px; }
+
+  .shell { display:flex; }
+  /* ===== Sidebar ===== */
+  .side { width:236px; flex-shrink:0; padding:22px 16px; position:sticky; top:62px; height:calc(100vh - 62px); display:flex; flex-direction:column; }
+  .nav-label { font-size:10.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); padding:0 12px 10px; }
+  .nav-item { display:flex; align-items:center; gap:12px; padding:11px 13px; border-radius:12px; font-size:14px; font-weight:500; color:var(--ink-soft); cursor:pointer; border:none; background:none; width:100%; text-align:left; transition:all .15s; font-family:inherit; margin-bottom:2px; position:relative; }
+  .nav-item:hover { background:var(--surf); color:var(--ink); }
+  .nav-item.active { background:var(--surf); color:var(--volt-ink); font-weight:600; box-shadow:var(--sh-s); }
+  .nav-item svg { width:18px; height:18px; flex-shrink:0; }
+  .nav-item.active svg { color:var(--volt); }
+  .nav-item .chip-n { margin-left:auto; font-size:11px; font-weight:700; background:var(--rose-wash); color:var(--rose); padding:1px 7px; border-radius:8px; }
+  .nav-sep { height:1px; background:var(--line); margin:16px 12px; }
+  .side-foot { margin-top:auto; }
+  .upsell { background:linear-gradient(150deg,#1a1228,#3a1b9e); border-radius:var(--rm); padding:16px; color:#fff; position:relative; overflow:hidden; }
+  .upsell::after { content:""; position:absolute; right:-20px; bottom:-30px; width:110px; height:110px; border-radius:50%; background:radial-gradient(circle,rgba(139,92,255,.6),transparent 70%); }
+  .upsell h5 { font-size:13.5px; font-weight:600; position:relative; z-index:1; }
+  .upsell p { font-size:11.5px; color:rgba(255,255,255,.7); margin:5px 0 11px; position:relative; z-index:1; line-height:1.45; }
+  .upsell button { position:relative; z-index:1; background:#fff; color:var(--volt-ink); border:none; padding:8px 14px; border-radius:9px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit; width:100%; }
+
+  /* ===== Content ===== */
+  .main { flex:1; min-width:0; padding:24px 32px 60px; max-width:1180px; }
+  .page-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; flex-wrap:wrap; gap:14px; }
+  .page-head .greet { display:flex; align-items:center; gap:14px; }
+  .greet-av { width:50px; height:50px; border-radius:14px; background:linear-gradient(135deg,var(--mint),#00a378); color:#fff; font-size:18px; font-weight:700; font-family:'Space Grotesk'; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(0,200,150,.25); }
+  .greet h1 { font-size:23px; font-weight:700; }
+  .greet .sub { font-size:13.5px; color:var(--ink-soft); margin-top:2px; }
+  .agent-live { display:inline-flex; align-items:center; gap:9px; background:var(--surf); border:1px solid var(--line); border-radius:14px; padding:9px 15px; box-shadow:var(--sh-s); }
+  .agent-live .av { width:30px; height:30px; border-radius:9px; background:var(--volt-wash); display:flex; align-items:center; justify-content:center; color:var(--volt); font-size:14px; font-weight:700; font-family:'Space Grotesk'; }
+  .agent-live .meta .nm { font-size:13px; font-weight:600; line-height:1.1; }
+  .agent-live .meta .st { font-size:11px; color:var(--mint); font-weight:600; display:flex; align-items:center; gap:4px; }
+  .pulse-dot { width:6px; height:6px; border-radius:50%; background:var(--mint); animation:pulse 1.8s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.4)} }
+
+  .view { display:none; }
+  .view.active { display:block; animation:fade .35s ease; }
+  @keyframes fade { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+  /* KPI row */
+  .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+  .kpi { background:var(--surf); border:1px solid var(--line); border-radius:var(--rm); padding:18px; position:relative; overflow:hidden; transition:all .2s; }
+  .kpi:hover { box-shadow:var(--sh-m); transform:translateY(-2px); }
+  .kpi.feat { background:linear-gradient(140deg,#1a1228 0%,#3a1b9e 100%); border:none; color:#fff; }
+  .kpi.feat::after { content:""; position:absolute; right:-30px; top:-30px; width:120px; height:120px; border-radius:50%; background:radial-gradient(circle,rgba(139,92,255,.45),transparent 70%); }
+  .kpi-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:13px; position:relative; z-index:1; }
+  .kpi-ic { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; }
+  .kpi-ic svg { width:18px; height:18px; }
+  .kpi.feat .kpi-ic { background:rgba(255,255,255,.15); color:#fff; }
+  .kpi-spark { display:flex; align-items:flex-end; gap:2px; height:24px; }
+  .kpi-spark i { width:3px; border-radius:2px; background:var(--line-2); }
+  .kpi.feat .kpi-spark i { background:rgba(255,255,255,.3); }
+  .kpi-val { font-family:'Space Grotesk'; font-size:30px; font-weight:700; line-height:1; position:relative; z-index:1; }
+  .kpi-lbl { font-size:12.5px; color:var(--ink-soft); margin-top:6px; position:relative; z-index:1; }
+  .kpi.feat .kpi-lbl { color:rgba(255,255,255,.72); }
+  .kpi-trend { font-size:11.5px; font-weight:600; margin-top:9px; display:inline-flex; align-items:center; gap:4px; position:relative; z-index:1; }
+  .up{color:var(--mint)} .warn{color:var(--amber)} .kpi.feat .up{color:#5fffd0}
+
+  .grid-2 { display:grid; grid-template-columns:1.5fr 1fr; gap:18px; }
+  .card { background:var(--surf); border:1px solid var(--line); border-radius:var(--rl); padding:22px; }
+  .card-h { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .card-h h3 { font-size:16px; font-weight:600; }
+  .card-h .more { font-size:12.5px; color:var(--volt); font-weight:600; cursor:pointer; }
+  .card .sub { font-size:12.5px; color:var(--ink-soft); margin-bottom:18px; }
+
+  .sec-title { font-size:15px; font-weight:600; font-family:'Space Grotesk'; letter-spacing:-.01em; margin:26px 0 14px; display:flex; align-items:center; gap:9px; }
+  .sec-title .sq { width:24px; height:24px; border-radius:7px; display:flex; align-items:center; justify-content:center; }
+  .sec-title .sq svg { width:14px; height:14px; }
+
+  .alert { background:var(--surf); border:1px solid var(--line); border-radius:var(--rm); padding:14px 16px; margin-bottom:10px; display:flex; gap:13px; align-items:center; transition:all .18s; cursor:pointer; }
+  .alert:hover { box-shadow:var(--sh-m); border-color:var(--line-2); }
+  .alert-ic { width:40px; height:40px; border-radius:11px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  .alert-ic svg { width:19px; height:19px; }
+  .alert-b h4 { font-size:14px; font-weight:600; font-family:'Inter'; letter-spacing:0; }
+  .alert-b p { font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+  .alert-t { margin-left:auto; flex-shrink:0; font-size:11px; color:var(--ink-faint); font-weight:500; white-space:nowrap; }
+  .alert-go { margin-left:8px; color:var(--ink-faint); flex-shrink:0; }
+  .alert-go svg{width:16px;height:16px}
+
+  .bars { display:flex; align-items:flex-end; gap:10px; height:150px; padding-top:22px; }
+  .bw { flex:1; display:flex; flex-direction:column; align-items:center; gap:9px; height:100%; justify-content:flex-end; }
+  .bar { width:100%; max-width:36px; border-radius:7px 7px 3px 3px; background:var(--surf-2); position:relative; transition:all .3s; }
+  .bar.pk { background:linear-gradient(180deg,var(--volt-2),var(--volt)); box-shadow:0 4px 12px rgba(96,41,255,.3); }
+  .bd { font-size:11.5px; color:var(--ink-faint); font-weight:600; }
+  .bv { font-size:11px; font-weight:700; color:var(--ink-soft); position:absolute; top:-19px; left:50%; transform:translateX(-50%); }
+  .bar.pk .bv { color:var(--volt); }
+
+  .rank { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--line); }
+  .rank:last-child{border-bottom:none}
+  .rank-n { width:23px; height:23px; border-radius:7px; background:var(--surf-2); color:var(--ink-soft); font-size:11.5px; font-weight:700; font-family:'Space Grotesk'; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .rank-nm { font-size:13.5px; font-weight:500; flex:1; }
+  .rank-bar { width:72px; height:6px; border-radius:4px; background:var(--surf-2); overflow:hidden; }
+  .rank-bar i { display:block; height:100%; background:linear-gradient(90deg,var(--mint),#3df0bc); border-radius:4px; }
+  .rank-c { font-size:12px; font-weight:700; color:var(--ink-soft); width:30px; text-align:right; }
+  .tag-out { font-size:11px; font-weight:700; color:var(--rose); background:var(--rose-wash); padding:3px 9px; border-radius:7px; }
+
+  /* features */
+  .cat { font-size:11.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); margin:24px 0 13px; display:flex; align-items:center; gap:10px; }
+  .cat:first-child{margin-top:0}
+  .cat .ln{flex:1;height:1px;background:var(--line)}
+  .fgrid { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+  .feat { background:var(--surf); border:1px solid var(--line); border-radius:var(--rm); padding:17px; transition:all .2s; }
+  .feat.on { border-color:#cdbcff; box-shadow:0 4px 18px rgba(96,41,255,.07); }
+  .feat-t { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .feat-ic { width:40px; height:40px; border-radius:11px; background:var(--surf-2); color:var(--ink-soft); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .2s; }
+  .feat.on .feat-ic { background:var(--volt-wash); color:var(--volt); }
+  .feat-ic svg{width:20px;height:20px}
+  .feat h4 { font-size:14px; font-weight:600; font-family:'Inter'; letter-spacing:0; }
+  .feat p { font-size:12px; color:var(--ink-soft); margin-top:4px; line-height:1.5; }
+  .lock { font-size:10px; font-weight:700; color:var(--mint); background:var(--mint-wash); padding:4px 9px; border-radius:7px; letter-spacing:.04em; }
+  .feat-hl { grid-column:1/-1; border:1.5px solid var(--volt); background:linear-gradient(170deg,var(--volt-wash),var(--surf) 55%); }
+  .star { font-size:10px; font-weight:700; color:var(--volt-ink); background:#fff; padding:3px 9px; border-radius:7px; border:1px solid #cdbcff; margin-left:6px; }
+
+  .sw { position:relative; width:44px; height:25px; flex-shrink:0; cursor:pointer; }
+  .sw input{opacity:0;width:0;height:0}
+  .sl { position:absolute; inset:0; background:#d8d4e6; border-radius:25px; transition:.25s; }
+  .sl:before { content:""; position:absolute; height:19px; width:19px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.25s; box-shadow:0 1px 4px rgba(0,0,0,.25); }
+  .sw input:checked + .sl { background:var(--volt); }
+  .sw input:checked + .sl:before { transform:translateX(19px); }
+
+  .field{margin-bottom:18px}
+  .field label{display:block;font-size:13.5px;font-weight:600;margin-bottom:8px}
+  .field input,.field textarea{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:var(--rs);font-size:14px;font-family:inherit;background:var(--bg);color:var(--ink);transition:all .15s}
+  .field input:focus,.field textarea:focus{outline:none;border-color:var(--volt);background:var(--surf);box-shadow:0 0 0 3px var(--volt-wash)}
+  .field .hint{font-size:12px;color:var(--ink-faint);margin-top:6px}
+  .chips{display:flex;gap:9px;flex-wrap:wrap}
+  .chip{padding:10px 16px;border:1px solid var(--line);border-radius:24px;font-size:13.5px;font-weight:500;cursor:pointer;transition:all .15s;background:var(--surf)}
+  .chip.sel{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .btn{background:var(--volt);color:#fff;border:none;padding:13px 24px;border-radius:var(--rs);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:var(--sh-volt);transition:transform .12s}
+  .btn:hover{transform:translateY(-1px)}
+
+  .chan{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--line)}
+  .chan:last-child{border-bottom:none}
+  .chan-ic{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .chan-ic svg{width:23px;height:23px}
+  .chan-i{flex:1}
+  .chan-i h4{font-size:14.5px;font-weight:600;font-family:'Inter';letter-spacing:0}
+  .chan-i p{font-size:12.5px;color:var(--ink-soft)}
+  .cst{font-size:12px;font-weight:600;padding:6px 13px;border-radius:18px}
+  .con{background:var(--mint-wash);color:#018a66} .dis{background:var(--surf-2);color:var(--ink-faint)}
+
+  .cal{display:grid;grid-template-columns:60px 1fr;gap:0}
+  .ch{font-size:12px;color:var(--ink-faint);font-weight:600;padding:14px 12px 0 0;text-align:right}
+  .cs{border-top:1px solid var(--line);padding:8px 0;min-height:54px}
+  .appt{border-radius:9px;padding:9px 12px;margin-bottom:5px;border-left:3px solid var(--volt);background:var(--volt-wash)}
+  .appt.m{border-left-color:var(--mint);background:var(--mint-wash)}
+  .appt.a{border-left-color:var(--amber);background:var(--amber-wash)}
+  .appt h5{font-size:13px;font-weight:600;font-family:'Inter';letter-spacing:0}
+  .appt span{font-size:11.5px;color:var(--ink-soft)}
+  .ahead{display:flex;gap:9px;margin-bottom:18px}
+  .dp{padding:9px 14px;border-radius:12px;border:1px solid var(--line);font-size:13px;font-weight:600;cursor:pointer;text-align:center;min-width:58px;background:var(--surf)}
+  .dp.sel{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .dp small{display:block;font-size:10.5px;font-weight:500;opacity:.7;margin-top:1px}
+
+  @media (max-width:980px){
+    .side{display:none}
+    .kpis{grid-template-columns:1fr 1fr}
+    .grid-2,.fgrid{grid-template-columns:1fr}
+    .main{padding:20px}
+    .topnav-search{display:none}
+    .brand{border-right:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== TOP BAR ===== -->
+<div class="topnav">
+  <div class="brand">
+    <div class="brand-logo"><svg viewBox="0 0 40 40" fill="none"><text x="7" y="32" font-family="'Space Grotesk',sans-serif" font-weight="700" font-size="38" fill="#fff">B</text><path d="M26 6 L17 21 H23 L20.5 33 L31 17 H25 L27.5 6 Z" fill="#00c896"/></svg></div>
+    <div class="brand-txt"><div class="n">Bolty</div><div class="f"><b>B</b>usiness <b>O</b>nline <b>L</b>ive <b>T</b>echnology For <b>Y</b>ou</div></div>
+  </div>
+  <div class="topnav-search"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>Buscar conversaciones, productos…</div>
+  <div class="topnav-right">
+    <div class="icon-btn"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><span class="badge">3</span></div>
+    <div class="acct"><div class="acct-av">VC</div><span class="acct-n">Veterinaria Centro</span><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--ink-faint)"><path d="M6 9l6 6 6-6"/></svg></div>
+  </div>
+</div>
+
+<div class="shell">
+  <!-- ===== SIDE ===== -->
+  <aside class="side">
+    <div class="nav-label">Tu negocio</div>
+    <button class="nav-item active" onclick="go('inicio',this)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>Inicio</button>
+    <button class="nav-item" onclick="go('agente',this)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4M8 16h.01M16 16h.01"/></svg>Mi agente</button>
+    <button class="nav-item" onclick="go('funciones',this)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1L14.5 2h-5l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5 2 1.5a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h5l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg>Funciones</button>
+    <button class="nav-item" onclick="go('reportes',this)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>Reportes</button>
+    <div class="nav-sep"></div>
+    <div class="nav-label">Servicios</div>
+    <button class="nav-item" onclick="go('agenda',this)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Agenda y turnos</button>
+    <button class="nav-item" onclick="go('canales',this)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>Canales</button>
+    <div class="side-foot">
+      <div class="upsell"><h5>⚡ Subí a Pro+</h5><p>Sumá sucursales ilimitadas y conexión con tu sistema de stock.</p><button>Ver planes</button></div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main">
+
+    <!-- INICIO -->
+    <div class="view active" id="inicio">
+      <div class="page-head">
+        <div class="greet"><div class="greet-av">VC</div><div><h1>Buenas, Veterinaria Centro</h1><div class="sub">Esto hizo tu agente esta semana</div></div></div>
+        <div class="agent-live"><div class="av">P</div><div class="meta"><div class="nm">Pelusa</div><div class="st"><span class="pulse-dot"></span>Respondiendo en vivo</div></div></div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="kpi-top"><div class="kpi-ic" style="background:var(--volt-wash);color:var(--volt)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div><div class="kpi-spark"><i style="height:40%"></i><i style="height:60%"></i><i style="height:45%"></i><i style="height:75%"></i><i style="height:90%"></i></div></div><div class="kpi-val">312</div><div class="kpi-lbl">Consultas respondidas</div><div class="kpi-trend up">▲ 18% vs anterior</div></div>
+        <div class="kpi"><div class="kpi-top"><div class="kpi-ic" style="background:var(--mint-wash);color:var(--mint)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div><div class="kpi-spark"><i style="height:50%"></i><i style="height:40%"></i><i style="height:70%"></i><i style="height:60%"></i><i style="height:85%"></i></div></div><div class="kpi-val">47</div><div class="kpi-lbl">Ventas cerradas</div><div class="kpi-trend up">▲ 9% vs anterior</div></div>
+        <div class="kpi feat"><div class="kpi-top"><div class="kpi-ic"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div><div class="kpi-spark"><i style="height:55%"></i><i style="height:70%"></i><i style="height:50%"></i><i style="height:80%"></i><i style="height:95%"></i></div></div><div class="kpi-val">23</div><div class="kpi-lbl">Turnos reservados solos</div><div class="kpi-trend up">▲ 4 más que la anterior</div></div>
+        <div class="kpi"><div class="kpi-top"><div class="kpi-ic" style="background:var(--rose-wash);color:var(--rose)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div></div><div class="kpi-val">2</div><div class="kpi-lbl">Reclamos para vos</div><div class="kpi-trend warn">Esperan respuesta</div></div>
+      </div>
+
+      <div class="sec-title"><span class="sq" style="background:var(--rose-wash);color:var(--rose)"><svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></span>Alertas en el momento</div>
+      <div class="alert"><div class="alert-ic" style="background:var(--rose-wash);color:var(--rose)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></div><div class="alert-b"><h4>Reclamo fuerte detectado</h4><p>Cliente molesto por un producto vencido. Pelusa ya te lo derivó.</p></div><div class="alert-t">hace 12 min</div><div class="alert-go"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div></div>
+      <div class="alert"><div class="alert-ic" style="background:var(--amber-wash);color:var(--amber)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></svg></div><div class="alert-b"><h4>Pico raro de consultas</h4><p>15 personas preguntaron por "antipulgas gato" en 2 horas. ¿Promo del día?</p></div><div class="alert-t">hace 1 h</div><div class="alert-go"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div></div>
+      <div class="alert"><div class="alert-ic" style="background:var(--volt-wash);color:var(--volt)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="alert-b"><h4>Cliente grande preguntando</h4><p>Una protectora pidió presupuesto por compra mayorista de alimento.</p></div><div class="alert-t">hace 3 h</div><div class="alert-go"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div></div>
+
+      <div class="grid-2" style="margin-top:26px">
+        <div class="card"><div class="card-h"><h3>Comparador de días</h3><span class="more">Ver detalle</span></div><div class="sub">Cuándo te escriben más, para reforzar o hacer promos</div>
+          <div class="bars">
+            <div class="bw"><div class="bar" style="height:48%"><span class="bv">31</span></div><div class="bd">Lun</div></div>
+            <div class="bw"><div class="bar" style="height:32%"><span class="bv">21</span></div><div class="bd">Mar</div></div>
+            <div class="bw"><div class="bar" style="height:55%"><span class="bv">36</span></div><div class="bd">Mié</div></div>
+            <div class="bw"><div class="bar pk" style="height:90%"><span class="bv">58</span></div><div class="bd">Jue</div></div>
+            <div class="bw"><div class="bar" style="height:70%"><span class="bv">46</span></div><div class="bd">Vie</div></div>
+            <div class="bw"><div class="bar" style="height:78%"><span class="bv">51</span></div><div class="bd">Sáb</div></div>
+            <div class="bw"><div class="bar" style="height:28%"><span class="bv">18</span></div><div class="bd">Dom</div></div>
+          </div>
+        </div>
+        <div class="card"><div class="card-h"><h3>Te piden y no tenés</h3></div><div class="sub">Qué conviene traer</div>
+          <div class="rank"><div class="rank-n">1</div><div class="rank-nm">Pipeta gato grande</div><span class="tag-out">19×</span></div>
+          <div class="rank"><div class="rank-n">2</div><div class="rank-nm">Alimento renal perro</div><span class="tag-out">14×</span></div>
+          <div class="rank"><div class="rank-n">3</div><div class="rank-nm">Collar isabelino XL</div><span class="tag-out">11×</span></div>
+          <div class="rank"><div class="rank-n">4</div><div class="rank-nm">Shampoo antialérgico</div><span class="tag-out">8×</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENTE -->
+    <div class="view" id="agente">
+      <div class="page-head"><div class="greet"><div class="greet-av" style="background:linear-gradient(135deg,var(--volt),var(--volt-2));box-shadow:0 6px 18px rgba(96,41,255,.25)">P</div><div><h1>Mi agente</h1><div class="sub">Configurá cómo se presenta y conversa Pelusa</div></div></div></div>
+      <div class="card" style="margin-bottom:18px">
+        <div class="card-h"><h3>Personalidad</h3></div><div class="sub">Así habla con tus clientes</div>
+        <div class="field"><label>Nombre del agente</label><input type="text" value="Pelusa"><div class="hint">Con este nombre saluda a tus clientes</div></div>
+        <div class="field"><label>Tono de conversación</label><div class="chips"><div class="chip" onclick="pick(this)">Formal</div><div class="chip sel" onclick="pick(this)">Cercano</div><div class="chip" onclick="pick(this)">Divertido</div><div class="chip" onclick="pick(this)">Con modismos argentinos</div></div></div>
+        <div class="field"><label>Entrená a Pelusa hablándole</label><textarea rows="3">Cuando pregunten por urgencias fuera de horario, decí que atendemos guardia los sábados hasta las 18h. Los domingos no abrimos.</textarea><div class="hint">Escribile indicaciones como a un empleado nuevo. Las aprende al instante.</div></div>
+        <button class="btn">Guardar cambios</button>
+      </div>
+      <div class="card"><div class="card-h"><h3>Tipo de negocio</h3></div><div class="sub">Define qué herramientas ves en tu panel</div>
+        <div class="chips"><div class="chip" onclick="pick(this)">Solo productos</div><div class="chip" onclick="pick(this)">Solo servicios con turno</div><div class="chip sel" onclick="pick(this)">Productos y turnos</div></div>
+        <div class="hint" style="margin-top:13px">Como elegiste turnos, tenés activo el módulo de Agenda en tu menú.</div>
+      </div>
+    </div>
+
+    <!-- FUNCIONES -->
+    <div class="view" id="funciones">
+      <div class="page-head"><div class="greet"><div><h1>Funciones</h1><div class="sub">Activá o desactivá lo que quieras para tu agente</div></div></div></div>
+      <div class="cat">Siempre activas <span class="ln"></span></div>
+      <div class="fgrid">
+        <div class="feat on"><div class="feat-t"><div style="display:flex;gap:13px"><div class="feat-ic"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div><div><h4>Te avisa lo que no sabe</h4><p>Si no tiene la respuesta, te pregunta a vos en vez de inventar.</p></div></div><span class="lock">NÚCLEO</span></div></div>
+        <div class="feat on"><div class="feat-t"><div style="display:flex;gap:13px"><div class="feat-ic"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg></div><div><h4>Reportes semanales</h4><p>Qué comprar, qué se vende y qué horarios son fuertes.</p></div></div><span class="lock">NÚCLEO</span></div></div>
+        <div class="feat on"><div class="feat-t"><div style="display:flex;gap:13px"><div class="feat-ic"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4"/></svg></div><div><h4>Entiende audios</h4><p>Escucha los audios de WhatsApp y responde como si los leyera.</p></div></div><span class="lock">NÚCLEO</span></div></div>
+        <div class="feat on"><div class="feat-t"><div style="display:flex;gap:13px"><div class="feat-ic"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></div><div><h4>Alertas en el momento</h4><p>Te avisa al toque si pasa algo importante.</p></div></div><span class="lock">NÚCLEO</span></div></div>
+      </div>
+      <div class="cat">Destacada <span class="ln"></span></div>
+      <div class="fgrid">
+        <div class="feat feat-hl on"><div class="feat-t"><div style="display:flex;gap:13px"><div class="feat-ic"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div><div><h4>Lista de espera inteligente <span class="star">★ RECOMENDADA</span></h4><p>Si no tenés stock, anota al cliente y le avisa solo cuando llega. No perdés la venta.</p></div></div><label class="sw"><input type="checkbox" checked><span class="sl"></span></label></div></div>
+      </div>
+      <div class="cat">Activá las que quieras <span class="ln"></span></div>
+      <div class="fgrid" id="tg"></div>
+    </div>
+
+    <!-- REPORTES -->
+    <div class="view" id="reportes">
+      <div class="page-head"><div class="greet"><div><h1>Reportes</h1><div class="sub">Lo que Bolty aprende de tus clientes</div></div></div></div>
+      <div class="card" style="margin-bottom:18px"><div class="card-h"><h3>¿Qué pregunta la gente?</h3></div><div class="sub">Las dudas más repetidas de la semana — oportunidades para mejorar</div>
+        <div class="rank"><div class="rank-n">1</div><div class="rank-nm">¿Hacen envíos a domicilio?</div><div class="rank-bar"><i style="width:92%"></i></div><div class="rank-c">88</div></div>
+        <div class="rank"><div class="rank-n">2</div><div class="rank-nm">¿Atienden los domingos?</div><div class="rank-bar"><i style="width:74%"></i></div><div class="rank-c">61</div></div>
+        <div class="rank"><div class="rank-n">3</div><div class="rank-nm">¿Aceptan Mercado Pago?</div><div class="rank-bar"><i style="width:60%"></i></div><div class="rank-c">49</div></div>
+        <div class="rank"><div class="rank-n">4</div><div class="rank-nm">¿Tienen planes de vacunación?</div><div class="rank-bar"><i style="width:41%"></i></div><div class="rank-c">34</div></div>
+        <div class="alert" style="margin-top:16px;cursor:default"><div class="alert-ic" style="background:var(--volt-wash);color:var(--volt)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9.66 18L9 21h6l-.66-3M12 2v1M12 12a4 4 0 004-4 4 4 0 00-8 0 4 4 0 004 4z"/></svg></div><div class="alert-b"><h4>Sugerencia de Bolty</h4><p>88 personas preguntaron por envíos. Conviene aclararlo en tu perfil, o evaluar empezar a ofrecerlos.</p></div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-h"><h3>Lo más consultado</h3></div><div class="sub">Productos que sí tenés y más se piden</div>
+          <div class="rank"><div class="rank-n">1</div><div class="rank-nm">Alimento Premium 15kg</div><div class="rank-bar"><i style="width:85%"></i></div><div class="rank-c">72</div></div>
+          <div class="rank"><div class="rank-n">2</div><div class="rank-nm">Pipeta perro mediano</div><div class="rank-bar"><i style="width:67%"></i></div><div class="rank-c">55</div></div>
+          <div class="rank"><div class="rank-n">3</div><div class="rank-nm">Arena sanitaria gato</div><div class="rank-bar"><i style="width:50%"></i></div><div class="rank-c">41</div></div>
+        </div>
+        <div class="card"><div class="card-h"><h3>Tu parte</h3></div><div class="sub">La semana de un vistazo</div>
+          <div style="display:flex;flex-direction:column;gap:15px;margin-top:4px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13.5px;color:var(--ink-soft)">Consultas atendidas</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:19px">312</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13.5px;color:var(--ink-soft)">Terminaron en venta</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:19px;color:var(--mint)">47</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13.5px;color:var(--ink-soft)">Turnos reservados</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:19px">23</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13.5px;color:var(--ink-soft)">Clientes recuperados</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:19px;color:var(--mint)">9</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENDA -->
+    <div class="view" id="agenda">
+      <div class="page-head"><div class="greet"><div><h1>Agenda y turnos</h1><div class="sub">Lo que Pelusa reservó por vos</div></div></div></div>
+      <div class="ahead">
+        <div class="dp"><span>Lun</span><small>16</small></div><div class="dp sel"><span>Mar</span><small>17</small></div><div class="dp"><span>Mié</span><small>18</small></div><div class="dp"><span>Jue</span><small>19</small></div><div class="dp"><span>Vie</span><small>20</small></div><div class="dp"><span>Sáb</span><small>21</small></div>
+      </div>
+      <div class="card"><div class="card-h"><h3>Turnos de hoy · Martes 17</h3></div><div class="sub">Reservados solos desde WhatsApp</div>
+        <div class="cal">
+          <div class="ch">09:00</div><div class="cs"><div class="appt m"><h5>Consulta — Rocky (labrador)</h5><span>Martín G. · Vacunación anual</span></div></div>
+          <div class="ch">10:30</div><div class="cs"><div class="appt"><h5>Control — Michi (gato)</h5><span>Laura P. · Seguimiento</span></div></div>
+          <div class="ch">12:00</div><div class="cs"></div>
+          <div class="ch">15:00</div><div class="cs"><div class="appt a"><h5>Peluquería — Toby (caniche)</h5><span>Sofía R. · Baño y corte</span></div></div>
+          <div class="ch">16:30</div><div class="cs"><div class="appt"><h5>Consulta — Luna (gata)</h5><span>Pedro M. · Desparasitación</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CANALES -->
+    <div class="view" id="canales">
+      <div class="page-head"><div class="greet"><div><h1>Canales</h1><div class="sub">Dónde responde tu agente</div></div></div></div>
+      <div class="card"><div class="card-h"><h3>Tus canales conectados</h3></div><div class="sub">Cada canal usa tu propio número y cuenta. Así nunca se mezcla con otro negocio.</div>
+        <div class="chan"><div class="chan-ic" style="background:var(--mint-wash);color:var(--mint)"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.6.1-.2.3-.7.9-.8 1-.1.2-.3.2-.6.1-.3-.1-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.6-1.5-.9-2-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.9.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.7-.7 1.9-1.3.2-.7.2-1.2.2-1.3-.1-.2-.3-.2-.6-.3zM12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2z"/></svg></div><div class="chan-i"><h4>WhatsApp</h4><p>+54 9 341 555-0142</p></div><span class="cst con">Conectado</span></div>
+        <div class="chan"><div class="chan-ic" style="background:#fce4f0;color:#d6248f"><svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.6 0 4.9.1 1.2.1 1.8.3 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.1.4.3 1 .4 2.2.1 1.3.1 1.7.1 4.9s0 3.6-.1 4.9c-.1 1.2-.3 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.1-1 .3-2.2.4-1.3.1-1.7.1-4.9.1s-3.6 0-4.9-.1c-1.2-.1-1.8-.3-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.1-.4-.3-1-.4-2.2-.1-1.3-.1-1.7-.1-4.9s0-3.6.1-4.9c.1-1.2.3-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.1 1-.3 2.2-.4 1.3-.1 1.7-.1 4.9-.1zM12 7.8a4.2 4.2 0 100 8.4 4.2 4.2 0 000-8.4zm0 6.9a2.7 2.7 0 110-5.4 2.7 2.7 0 010 5.4zm5.3-7.1a1 1 0 11-2 0 1 1 0 012 0z"/></svg></div><div class="chan-i"><h4>Instagram</h4><p>@veterinaria.centro</p></div><span class="cst con">Conectado</span></div>
+        <div class="chan"><div class="chan-ic" style="background:var(--volt-wash);color:var(--volt)"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 014 10 15 15 0 01-4 10 15 15 0 01-4-10 15 15 0 014-10z"/></svg></div><div class="chan-i"><h4>Chat en tu web</h4><p>Pegás un código y aparece el chat en tu página</p></div><span class="cst dis">Sin conectar</span></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  const toggles = [
+    ['Vende y agenda','Cierra la venta o reserva el turno dentro de la charla.','M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11',true],
+    ['Recupera clientes','Si alguien preguntó y no compró, le reescribe con una promo.','M3 12a9 9 0 109-9 9 9 0 00-9 9zM3 12l4-4M3 12l4 4',true],
+    ['Detecta el idioma','Si escriben en inglés o portugués, responde en ese idioma.','M5 8l6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6',false],
+    ['Deriva a humano','Si el cliente se enoja o pide una persona, te pasa la charla.','M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8M19 8v6M22 11h-6',true],
+    ['Productos relacionados','Ofrece sumar algo más a la compra. Vende más por charla.','M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0',true],
+    ['Cupones y promos','Ofrece una promo en el momento justo o a quien hace rato no compra.','M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6M2 7h20v5a2 2 0 01-2 2H4a2 2 0 01-2-2zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z',false],
+    ['Personalidad propia','Elegís el tono: formal, canchero, divertido, con modismos.','M12 2a10 10 0 100 20 10 10 0 000-20zM8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01',true],
+    ['Resumen de voz diario','Cada noche te llega un audio corto con el parte del día.','M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3zM19 10v2a7 7 0 01-14 0v-2',false],
+    ['¿Qué pregunta la gente?','Resumen de las dudas más repetidas para mejorar tu negocio.','M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01M12 2a10 10 0 100 20 10 10 0 000-20z',true],
+    ['Comparador de días','Te muestra tu mejor y peor día para reforzar o hacer promos.','M3 3v18h18M18 17V9M13 17V5M8 17v-3',true],
+  ];
+  const g = document.getElementById('tg');
+  toggles.forEach(([t,d,p,on])=>{
+    const paths = p.split('M').filter(Boolean).map(s=>'<path d="M'+s+'"/>').join('');
+    g.insertAdjacentHTML('beforeend',`<div class="feat ${on?'on':''}"><div class="feat-t"><div style="display:flex;gap:13px"><div class="feat-ic"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">${paths}</svg></div><div><h4>${t}</h4><p>${d}</p></div></div><label class="sw"><input type="checkbox" ${on?'checked':''} onchange="this.closest('.feat').classList.toggle('on',this.checked)"><span class="sl"></span></label></div></div>`);
+  });
+  function go(id,btn){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    btn.classList.add('active');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function pick(el){ [...el.parentElement.children].forEach(c=>c.classList.remove('sel')); el.classList.add('sel'); }
+</script>
+</body>
+</html>
