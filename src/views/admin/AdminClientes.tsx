@@ -7,34 +7,61 @@ interface Props {
   onImpersonate: (client: Client) => void
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  active: 'active', inactive: 'inactive', trial: 'trial', suspended: 'suspended',
+// Client + is_active leído de profiles (la fuente real de verdad del acceso)
+interface ClientRow extends Client {
+  is_active: boolean
 }
 
 const EMPTY_FORM = {
   email: '', password: '', business_name: '', whatsapp: '',
-  plan_id: '', status: 'trial' as Client['status'], paid_until: '', trial_ends_at: '', notes: '',
+  // Default: inactivo → el admin activa cuando confirma el pago
+  plan_id: '', status: 'inactive' as Client['status'], paid_until: '', trial_ends_at: '', notes: '',
 }
 
 export default function AdminClientes({ onImpersonate }: Props) {
-  const [clients, setClients]     = useState<Client[]>([])
-  const [plans, setPlans]         = useState<Plan[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [search, setSearch]       = useState('')
-  const [filter, setFilter]       = useState<'all' | Client['status']>('all')
+  const [clients, setClients]       = useState<ClientRow[]>([])
+  const [plans, setPlans]           = useState<Plan[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [search, setSearch]         = useState('')
+  const [filter, setFilter]         = useState<'all' | Client['status']>('all')
   const [showCreate, setShowCreate] = useState(false)
-  const [editClient, setEditClient] = useState<Client | null>(null)
-  const [form, setForm]           = useState({ ...EMPTY_FORM })
-  const [saving, setSaving]       = useState(false)
-  const [msg, setMsg]             = useState('')
-  const [err, setErr]             = useState('')
+  const [editClient, setEditClient] = useState<ClientRow | null>(null)
+  const [form, setForm]             = useState({ ...EMPTY_FORM })
+  const [saving, setSaving]         = useState(false)
+  const [msg, setMsg]               = useState('')
+  const [formErr, setFormErr]       = useState('')
+  // Estado de operación sobre una fila concreta
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [opErr, setOpErr]           = useState('')
 
   async function load() {
     const [{ data: cl }, { data: pl }] = await Promise.all([
       supabase.from('clients').select('*, plan:plans(id,name,price_ars,description)').order('created_at', { ascending: false }),
       supabase.from('plans').select('*').order('price_ars'),
     ])
-    setClients(cl || [])
+
+    // Cargamos is_active real desde profiles para cada cliente
+    const ids = (cl || []).map(c => c.id)
+    let profileMap: Record<string, boolean> = {}
+    if (ids.length > 0) {
+      const { data: profs } = await supabase
+        .from('profiles')
+        .select('id, is_active')
+        .in('id', ids)
+      ;(profs || []).forEach((p: { id: string; is_active: boolean }) => {
+        profileMap[p.id] = p.is_active
+      })
+    }
+
+    const enriched: ClientRow[] = (cl || []).map(c => ({
+      ...c,
+      // Si no se pudo leer profiles, derivamos is_active del status de clients
+      is_active: profileMap[c.id] !== undefined
+        ? profileMap[c.id]
+        : (c.status === 'active' || c.status === 'trial'),
+    }))
+
+    setClients(enriched)
     setPlans(pl || [])
     setLoading(false)
   }
@@ -49,47 +76,79 @@ export default function AdminClientes({ onImpersonate }: Props) {
     return matchSearch && matchFilter
   })
 
-  function openCreate() {
-    setForm({ ...EMPTY_FORM })
-    setErr('')
-    setMsg('')
-    setShowCreate(true)
+  // ─── Activar / Desactivar acceso ──────────────────────────────────────────
+  async function toggleAccess(c: ClientRow) {
+    const newActive = !c.is_active
+    setUpdatingId(c.id)
+    setOpErr('')
+
+    const { error: profErr } = await supabase
+      .from('profiles')
+      .update({ is_active: newActive })
+      .eq('id', c.id)
+
+    if (profErr) {
+      setOpErr(
+        `No se pudo ${newActive ? 'activar' : 'desactivar'} a "${c.business_name || c.email}": ${profErr.message}`
+      )
+      setUpdatingId(null)
+      return
+    }
+
+    // Sincronizamos clients.status para que el resto del panel quede consistente
+    const newStatus: Client['status'] = newActive ? 'active' : 'inactive'
+    await supabase
+      .from('clients')
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq('id', c.id)
+
+    await logActivity(
+      newActive ? 'activate_client' : 'deactivate_client',
+      c.id, 'client', { email: c.email }
+    )
+
+    setUpdatingId(null)
+    load()
   }
 
-  function openEdit(c: Client) {
-    setForm({
-      email: c.email, password: '',
-      business_name: c.business_name || '', whatsapp: c.whatsapp || '',
-      plan_id: c.plan_id || '', status: c.status,
-      paid_until: c.paid_until ? c.paid_until.slice(0, 10) : '',
-      trial_ends_at: c.trial_ends_at ? c.trial_ends_at.slice(0, 10) : '',
-      notes: c.notes || '',
-    })
-    setErr('')
-    setMsg('')
-    setEditClient(c)
+  // ─── Suspender (bloqueo fuerte) ───────────────────────────────────────────
+  async function suspend(c: ClientRow) {
+    if (!confirm(`¿Suspender a ${c.business_name || c.email}?\nNo podrá entrar hasta que lo reactives.`)) return
+    setUpdatingId(c.id)
+    await Promise.all([
+      supabase.from('profiles').update({ is_active: false }).eq('id', c.id),
+      supabase.from('clients').update({ status: 'suspended', updated_at: new Date().toISOString() }).eq('id', c.id),
+    ])
+    await logActivity('suspend_client', c.id, 'client')
+    setUpdatingId(null)
+    load()
   }
 
+  // ─── Crear cliente ────────────────────────────────────────────────────────
   async function handleCreate() {
-    if (!form.email || !form.password) { setErr('Email y contraseña son obligatorios.'); return }
-    setSaving(true); setErr('')
+    if (!form.email || !form.password) { setFormErr('Email y contraseña son obligatorios.'); return }
+    setSaving(true); setFormErr('')
     try {
       const { data: { session: adminSess } } = await supabase.auth.getSession()
-      if (!adminSess) { setErr('Sesión expirada, volvé a entrar.'); return }
+      if (!adminSess) { setFormErr('Sesión expirada, volvé a entrar.'); return }
 
       const { data: newUser, error: signUpErr } = await supabase.auth.signUp({
         email: form.email.trim(),
         password: form.password,
         options: { data: { name: form.business_name || form.email } },
       })
-      if (signUpErr) { setErr(signUpErr.message); return }
+      if (signUpErr) { setFormErr(signUpErr.message); return }
       const uid = newUser.user?.id
-      if (!uid) { setErr('No se pudo crear el usuario.'); return }
+      if (!uid) { setFormErr('No se pudo crear el usuario.'); return }
 
-      await supabase.auth.setSession({ access_token: adminSess.access_token, refresh_token: adminSess.refresh_token })
+      // Restaurar sesión del admin (signUp puede haber cambiado la sesión)
+      await supabase.auth.setSession({
+        access_token: adminSess.access_token,
+        refresh_token: adminSess.refresh_token,
+      })
 
       const isActive = form.status === 'active' || form.status === 'trial'
-      await Promise.all([
+      const [profRes, clientRes] = await Promise.all([
         supabase.from('profiles').upsert({ id: uid, is_active: isActive, is_admin: false }),
         supabase.from('clients').insert({
           id: uid, email: form.email.trim(),
@@ -102,18 +161,24 @@ export default function AdminClientes({ onImpersonate }: Props) {
           notes: form.notes || null,
         }),
       ])
+
+      if (profRes.error)   { setFormErr('Error al crear perfil: ' + profRes.error.message); return }
+      if (clientRes.error) { setFormErr('Error al guardar datos: ' + clientRes.error.message); return }
+
       await logActivity('create_client', uid, 'client', { email: form.email })
       setShowCreate(false)
-      setMsg('Cliente creado.')
+      setMsg(`✓ Cliente "${form.business_name || form.email}" creado. Estado: ${statusLabel(form.status)}.`)
       load()
     } finally { setSaving(false) }
   }
 
+  // ─── Editar cliente ───────────────────────────────────────────────────────
   async function handleEdit() {
     if (!editClient) return
-    setSaving(true); setErr('')
+    setSaving(true); setFormErr('')
     const isActive = form.status === 'active' || form.status === 'trial'
-    await Promise.all([
+    const [profRes, clientRes] = await Promise.all([
+      supabase.from('profiles').update({ is_active: isActive }).eq('id', editClient.id),
       supabase.from('clients').update({
         business_name: form.business_name || null,
         whatsapp: form.whatsapp || null,
@@ -124,36 +189,52 @@ export default function AdminClientes({ onImpersonate }: Props) {
         notes: form.notes || null,
         updated_at: new Date().toISOString(),
       }).eq('id', editClient.id),
-      supabase.from('profiles').update({ is_active: isActive }).eq('id', editClient.id),
     ])
-    await logActivity('edit_client', editClient.id, 'client', { status: form.status })
-    setEditClient(null)
+    if (profRes.error)   setFormErr('Error al actualizar acceso: ' + profRes.error.message)
+    if (clientRes.error) setFormErr('Error al guardar datos: ' + clientRes.error.message)
+    if (!profRes.error && !clientRes.error) {
+      await logActivity('edit_client', editClient.id, 'client', { status: form.status })
+      setEditClient(null)
+    }
     load()
     setSaving(false)
   }
 
-  async function setStatus(c: Client, status: Client['status']) {
-    const isActive = status === 'active' || status === 'trial'
-    await Promise.all([
-      supabase.from('clients').update({ status, updated_at: new Date().toISOString() }).eq('id', c.id),
-      supabase.from('profiles').update({ is_active: isActive }).eq('id', c.id),
-    ])
-    await logActivity('set_status_' + status, c.id, 'client')
-    load()
-  }
-
-  async function resetPassword(c: Client) {
+  async function resetPassword(c: ClientRow) {
     const { error } = await supabase.auth.resetPasswordForEmail(c.email)
-    if (error) alert('Error: ' + error.message)
-    else alert(`Mail de recuperación enviado a ${c.email}`)
+    if (error) setOpErr('Error enviando email: ' + error.message)
+    else setMsg(`✓ Email de recuperación enviado a ${c.email}`)
   }
 
+  function openCreate() {
+    setForm({ ...EMPTY_FORM }); setFormErr(''); setMsg('')
+    setShowCreate(true)
+  }
+
+  function openEdit(c: ClientRow) {
+    setForm({
+      email: c.email, password: '',
+      business_name: c.business_name || '', whatsapp: c.whatsapp || '',
+      plan_id: c.plan_id || '', status: c.status,
+      paid_until: c.paid_until ? c.paid_until.slice(0, 10) : '',
+      trial_ends_at: c.trial_ends_at ? c.trial_ends_at.slice(0, 10) : '',
+      notes: c.notes || '',
+    })
+    setFormErr(''); setMsg('')
+    setEditClient(c)
+  }
+
+  // ─── Modal de crear/editar ────────────────────────────────────────────────
   const modalForm = (isEdit: boolean) => (
     <div className="modal-ov" onClick={e => { if (e.target === e.currentTarget) isEdit ? setEditClient(null) : setShowCreate(false) }}>
       <div className="modal-box">
         <h2>{isEdit ? 'Editar cliente' : 'Nuevo cliente'}</h2>
 
-        {err && <div style={{ background: 'var(--rose-wash)', color: 'var(--rose)', padding: '10px 14px', borderRadius: 10, fontSize: 13, marginBottom: 16 }}>{err}</div>}
+        {formErr && (
+          <div style={{ background: 'var(--rose-wash)', color: 'var(--rose)', padding: '10px 14px', borderRadius: 10, fontSize: 13, marginBottom: 16 }}>
+            {formErr}
+          </div>
+        )}
 
         {!isEdit && (
           <>
@@ -185,14 +266,17 @@ export default function AdminClientes({ onImpersonate }: Props) {
           </select>
         </div>
         <div className="field">
-          <label>Estado</label>
+          <label>Estado / Acceso</label>
           <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as Client['status'] }))}
             style={{ width: '100%', padding: '12px 14px', border: '1px solid var(--line)', borderRadius: 'var(--rs)', fontSize: 14, fontFamily: 'inherit', background: 'var(--bg)' }}>
-            <option value="trial">Prueba</option>
-            <option value="active">Activo</option>
-            <option value="inactive">Inactivo</option>
-            <option value="suspended">Suspendido</option>
+            <option value="inactive">Inactivo — sin acceso (esperando pago)</option>
+            <option value="active">Activo — puede entrar</option>
+            <option value="trial">Prueba — puede entrar</option>
+            <option value="suspended">Suspendido — bloqueado</option>
           </select>
+          <div className="hint" style={{ fontSize: 12, color: 'var(--ink-faint)', marginTop: 6 }}>
+            Inactivo = no puede entrar. Lo activás cuando confirmás el pago.
+          </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div className="field">
@@ -220,14 +304,26 @@ export default function AdminClientes({ onImpersonate }: Props) {
     </div>
   )
 
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <>
       <div className="adm-page-head">
-        <div><h1>Clientes</h1><p>{clients.length} en total</p></div>
+        <div><h1>Clientes</h1><p>{clients.length} en total · {clients.filter(c => c.is_active).length} con acceso activo</p></div>
         <button className="abtn primary" onClick={openCreate}>+ Nuevo cliente</button>
       </div>
 
-      {msg && <div style={{ background: 'var(--mint-wash)', color: '#018a66', padding: '10px 16px', borderRadius: 10, fontSize: 13, marginBottom: 16 }}>{msg}</div>}
+      {msg && (
+        <div style={{ background: 'var(--mint-wash)', color: '#018a66', padding: '11px 16px', borderRadius: 10, fontSize: 13.5, marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>{msg}</span>
+          <button onClick={() => setMsg('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#018a66', fontSize: 16, padding: '0 4px' }}>✕</button>
+        </div>
+      )}
+      {opErr && (
+        <div style={{ background: 'var(--rose-wash)', color: 'var(--rose)', padding: '11px 16px', borderRadius: 10, fontSize: 13.5, marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>{opErr}</span>
+          <button onClick={() => setOpErr('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--rose)', fontSize: 16, padding: '0 4px' }}>✕</button>
+        </div>
+      )}
 
       <div className="adm-toolbar">
         <input className="adm-search" placeholder="Buscar por nombre o email…" value={search} onChange={e => setSearch(e.target.value)} />
@@ -246,42 +342,94 @@ export default function AdminClientes({ onImpersonate }: Props) {
                 <tr>
                   <th>Negocio / Email</th>
                   <th>Plan</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Acceso al dashboard</th>
                   <th>Estado</th>
                   <th>Vence</th>
-                  <th>WhatsApp</th>
-                  <th>Acciones</th>
+                  <th>Más</th>
                 </tr>
               </thead>
               <tbody>
                 {visible.length === 0 && (
                   <tr><td colSpan={6} className="adm-empty">Sin resultados.</td></tr>
                 )}
-                {visible.map(c => (
-                  <tr key={c.id}>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: 14 }}>{c.business_name || '—'}</div>
-                      <div style={{ color: 'var(--ink-soft)', fontSize: 12 }}>{c.email}</div>
-                    </td>
-                    <td style={{ fontSize: 13 }}>{c.plan?.name || <span style={{ color: 'var(--ink-faint)' }}>Sin plan</span>}</td>
-                    <td><span className={`sbadge ${STATUS_COLORS[c.status]}`}>{statusLabel(c.status)}</span></td>
-                    <td style={{ fontSize: 13, color: isPastDue(c) ? 'var(--rose)' : undefined, fontWeight: isPastDue(c) ? 700 : undefined }}>
-                      {fmtDate(c.paid_until)}
-                    </td>
-                    <td style={{ fontSize: 13 }}>{c.whatsapp || '—'}</td>
-                    <td>
-                      <div className="adm-actions">
-                        <button className="abtn" title="Editar" onClick={() => openEdit(c)}>
-                          <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="13" height="13"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                {visible.map(c => {
+                  const isUpdating = updatingId === c.id
+                  return (
+                    <tr key={c.id}>
+                      <td>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{c.business_name || '—'}</div>
+                        <div style={{ color: 'var(--ink-soft)', fontSize: 12 }}>{c.email}</div>
+                      </td>
+                      <td style={{ fontSize: 13 }}>
+                        {c.plan?.name || <span style={{ color: 'var(--ink-faint)' }}>Sin plan</span>}
+                      </td>
+
+                      {/* ── Columna de acceso: el toggle principal ── */}
+                      <td>
+                        <button
+                          onClick={() => toggleAccess(c)}
+                          disabled={isUpdating}
+                          title={c.is_active ? 'Clic para DESACTIVAR acceso' : 'Clic para ACTIVAR acceso'}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 8,
+                            padding: '8px 16px', borderRadius: 24, border: 'none',
+                            cursor: isUpdating ? 'wait' : 'pointer',
+                            fontWeight: 700, fontSize: 13, transition: 'all .15s',
+                            fontFamily: 'Space Grotesk, sans-serif',
+                            background: isUpdating
+                              ? 'var(--surf-2)'
+                              : c.is_active
+                                ? 'var(--mint-wash)'
+                                : 'var(--surf-2)',
+                            color: isUpdating
+                              ? 'var(--ink-faint)'
+                              : c.is_active
+                                ? '#018a66'
+                                : 'var(--ink-soft)',
+                            boxShadow: c.is_active && !isUpdating ? '0 0 0 1.5px #00c89640' : 'none',
+                          }}
+                        >
+                          <span style={{
+                            width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
+                            background: isUpdating
+                              ? 'var(--ink-faint)'
+                              : c.is_active ? 'var(--mint)' : 'var(--ink-faint)',
+                            boxShadow: c.is_active && !isUpdating ? '0 0 0 3px #00c89625' : 'none',
+                          }} />
+                          {isUpdating ? 'Actualizando…' : c.is_active ? 'Activo' : 'En espera'}
                         </button>
-                        {c.status !== 'active' && <button className="abtn" title="Activar" onClick={() => setStatus(c, 'active')} style={{ color: '#018a66' }}>✓ Activar</button>}
-                        {c.status === 'active' && <button className="abtn danger" title="Desactivar" onClick={() => setStatus(c, 'inactive')}>Desactivar</button>}
-                        {c.status !== 'suspended' && <button className="abtn danger" title="Suspender" onClick={() => { if (confirm(`¿Suspender a ${c.business_name || c.email}?`)) setStatus(c, 'suspended') }}>Suspender</button>}
-                        <button className="abtn" title="Reset contraseña" onClick={() => resetPassword(c)}>🔑</button>
-                        <button className="abtn" title="Ver como cliente" onClick={() => onImpersonate(c)}>👁</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+
+                      <td>
+                        <span className={`sbadge ${c.status}`}>{statusLabel(c.status)}</span>
+                      </td>
+                      <td style={{
+                        fontSize: 13,
+                        color: isPastDue(c) ? 'var(--rose)' : undefined,
+                        fontWeight: isPastDue(c) ? 700 : undefined,
+                      }}>
+                        {fmtDate(c.paid_until)}
+                      </td>
+                      <td>
+                        <div className="adm-actions">
+                          <button className="abtn" title="Editar datos" onClick={() => openEdit(c)}>
+                            <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="13" height="13">
+                              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                          </button>
+                          {c.status !== 'suspended' && (
+                            <button className="abtn danger" title="Suspender" onClick={() => suspend(c)} disabled={isUpdating}>
+                              Suspender
+                            </button>
+                          )}
+                          <button className="abtn" title="Resetear contraseña" onClick={() => resetPassword(c)}>🔑</button>
+                          <button className="abtn" title="Ver como cliente" onClick={() => onImpersonate(c)}>👁</button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -294,6 +442,6 @@ export default function AdminClientes({ onImpersonate }: Props) {
   )
 }
 
-function isPastDue(c: Client) {
-  return !!c.paid_until && new Date(c.paid_until) < new Date() && c.status === 'active'
+function isPastDue(c: ClientRow) {
+  return !!c.paid_until && new Date(c.paid_until) < new Date() && c.is_active
 }
