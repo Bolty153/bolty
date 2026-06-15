@@ -82,14 +82,16 @@ export default function AdminClientes({ onImpersonate }: Props) {
     setUpdatingId(c.id)
     setOpErr('')
 
+    // UPSERT: crea la fila en profiles si no existe, o la actualiza si ya existe.
+    // UPDATE silencioso era el problema: si no había fila, no fallaba pero tampoco hacía nada.
     const { error: profErr } = await supabase
       .from('profiles')
-      .update({ is_active: newActive })
-      .eq('id', c.id)
+      .upsert({ id: c.id, is_active: newActive, is_admin: false })
 
     if (profErr) {
       setOpErr(
-        `No se pudo ${newActive ? 'activar' : 'desactivar'} a "${c.business_name || c.email}": ${profErr.message}`
+        `No se pudo ${newActive ? 'activar' : 'desactivar'} "${c.business_name || c.email}": ${profErr.message}`
+        + (profErr.code === '42501' ? ' — Corré el SQL de permisos de profiles en Supabase.' : '')
       )
       setUpdatingId(null)
       return
@@ -178,7 +180,7 @@ export default function AdminClientes({ onImpersonate }: Props) {
     setSaving(true); setFormErr('')
     const isActive = form.status === 'active' || form.status === 'trial'
     const [profRes, clientRes] = await Promise.all([
-      supabase.from('profiles').update({ is_active: isActive }).eq('id', editClient.id),
+      supabase.from('profiles').upsert({ id: editClient.id, is_active: isActive, is_admin: false }),
       supabase.from('clients').update({
         business_name: form.business_name || null,
         whatsapp: form.whatsapp || null,
