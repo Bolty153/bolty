@@ -73,7 +73,7 @@ const ICONS = {
 const STATS = [
   { num: '78%', lbl: 'de los clientes le compra al primero que le contesta. El que tarda, pierde.' },
   { num: '+3 hs', lbl: 'es el tiempo promedio que tarda un negocio en responder un WhatsApp.' },
-  { num: '1 de 3', lbl: 'clientes no vuelve a escribir si lo dejaste esperando demasiado.' },
+  { num: '1 de 3', lbl: 'clientes no vuelve a escribir si tuvo que esperar demasiado para recibir una respuesta.' },
 ]
 
 const STEPS = [
@@ -91,7 +91,7 @@ const FEATURES = [
   { t: 'Recupera clientes', d: 'Le escribe a quien no volvió, antes de que se olvide de vos.', ic: ICONS.heart, bg: 'var(--mint-wash)', c: '#018a66' },
   { t: 'Sabe cuándo no sabe', d: 'Si una consulta es compleja, te la deriva a vos en el momento, sin inventar.', ic: ICONS.alert, bg: 'var(--amber-wash)', c: 'var(--amber)' },
   { t: 'Reportes inteligentes', d: 'Te dice qué se vende, qué falta y cuándo reforzar. Más abajo te mostramos cómo.', ic: ICONS.chart, bg: 'var(--volt-wash)', c: 'var(--volt)' },
-  { t: 'Alertas en el momento', d: 'Reclamo fuerte, pico de consultas o cliente importante: te avisa al toque.', ic: ICONS.bell, bg: 'var(--rose-wash)', c: 'var(--rose)' },
+  { t: 'Alertas en el momento', d: 'Reclamo fuerte, pico de consultas o cliente importante: te avisa de inmediato.', ic: ICONS.bell, bg: 'var(--rose-wash)', c: 'var(--rose)' },
 ]
 
 const RUBROS = [
@@ -103,6 +103,7 @@ const RUBROS = [
   { t: 'Tiendas de ropa', ic: ICONS.shirt },
   { t: 'Kioscos y almacenes', ic: ICONS.bag },
   { t: 'Gimnasios y estudios', ic: ICONS.dumbbell },
+  { t: 'Y muchos rubros más', ic: ICONS.globe },
 ]
 
 const BENEFITS = [
@@ -196,7 +197,7 @@ export default function Landing({ onEnter }: Props) {
               <p>
                 Mientras dormís, atendés a otro cliente o estás arriba de un mostrador, tu WhatsApp
                 se llena de mensajes sin responder. Y cada minuto que pasa, es un cliente que se va
-                derechito a la competencia.
+                directo a la competencia.
               </p>
             </div>
           </Reveal>
@@ -376,7 +377,12 @@ export default function Landing({ onEnter }: Props) {
           <Reveal>
             <div className="lp-head">
               <span className="lp-eyebrow">Para quién es</span>
-              <h2>Si tu negocio recibe consultas por WhatsApp, Bolty es para vos</h2>
+              <h2>Si tu negocio recibe consultas, Bolty es para vos</h2>
+              <p>
+                Sirve para comercios, profesionales, servicios y emprendimientos de todo tipo.
+                Si tu negocio recibe consultas por WhatsApp, ya podés automatizar la atención con Bolty.
+                Estos son solo algunos ejemplos:
+              </p>
             </div>
           </Reveal>
           <div className="lp-rubros">
@@ -488,7 +494,7 @@ export default function Landing({ onEnter }: Props) {
           <Reveal>
             <div className="lp-final">
               <h2>Empezá hoy a no perder más clientes</h2>
-              <p>Sumate a los negocios que ya dejaron de contestar a las apuradas y empezaron a vender en serio.</p>
+              <p>Sumate a los negocios que ya dejaron de responder a las apuradas y empezaron a vender de manera profesional.</p>
               <div className="landing-cta">
                 <button className="landing-btn-primary" onClick={handleContact}>Quiero mi prueba gratis</button>
                 <button className="landing-btn-ghost" onClick={handleContact}>Contactanos</button>
