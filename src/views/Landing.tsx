@@ -152,13 +152,18 @@ export default function Landing({ onEnter }: Props) {
       <div className="landing-hero">
         <div className="landing-nav">
           <div className="landing-nav-brand">
-            <div className="brand-logo" style={{ width: '38px', height: '38px', borderRadius: '10px' }}>
-              <svg viewBox="5 3 28 32" fill="none" style={{ width: '28px', height: '28px' }}>
-                <text x="7" y="32" fontFamily="'Space Grotesk',sans-serif" fontWeight="700" fontSize="38" fill="#fff">B</text>
-                <path d="M26 6 L17 21 H23 L20.5 33 L31 17 H25 L27.5 6 Z" fill="#00c896" />
-              </svg>
+            <div className="landing-nav-brand-row">
+              <div className="brand-logo" style={{ width: '92px', height: '92px', borderRadius: '24px' }}>
+                <svg viewBox="5 3 28 32" fill="none" style={{ width: '70px', height: '70px' }}>
+                  <text x="7" y="32" fontFamily="'Space Grotesk',sans-serif" fontWeight="700" fontSize="38" fill="#fff">B</text>
+                  <path d="M26 6 L17 21 H23 L20.5 33 L31 17 H25 L27.5 6 Z" fill="#00c896" />
+                </svg>
+              </div>
+              <span>B.O.L.T.Y</span>
             </div>
-            <span>B.O.L.T.Y</span>
+            <p className="landing-nav-acronym">
+              <b>B</b>usiness <b>O</b>nline <b>L</b>ive <b>T</b>echnology <b>F</b>or <b>Y</b>ou
+            </p>
           </div>
         </div>
 

@@ -508,11 +508,16 @@ h1,h2,h3,h4,h5,.disp {
   position: relative; z-index: 1; display: flex; align-items: center;
   justify-content: center; max-width: 1080px; margin: 0 auto 0;
 }
-.landing-nav-brand { display: flex; align-items: center; gap: 10px; }
-.landing-nav-brand span {
-  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px;
-  color: #fff; letter-spacing: .12em;
+.landing-nav-brand { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.landing-nav-brand-row { display: flex; align-items: center; gap: 18px; }
+.landing-nav-brand-row span {
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 46px;
+  color: #fff; letter-spacing: .1em;
 }
+.landing-nav-acronym {
+  font-size: 13px; color: rgba(255,255,255,.6); letter-spacing: .02em;
+}
+.landing-nav-acronym b { color: rgba(255,255,255,.95); font-weight: 700; }
 .landing-hero-inner {
   position: relative; z-index: 1; max-width: 760px; margin: auto 0; padding-top: 60px; text-align: center;
 }
@@ -767,6 +772,10 @@ h1,h2,h3,h4,h5,.disp {
 }
 @media (max-width: 760px) {
   .landing-hero { padding-bottom: 110px; min-height: auto; }
+  .landing-nav-brand-row .brand-logo { width: 64px !important; height: 64px !important; border-radius: 18px !important; }
+  .landing-nav-brand-row .brand-logo svg { width: 48px !important; height: 48px !important; }
+  .landing-nav-brand-row span { font-size: 30px; }
+  .landing-nav-acronym { font-size: 11px; }
   .landing-hero-inner { padding-top: 30px; }
   .landing-hero-inner h1 { font-size: 32px; }
   .lp-section { padding: 70px 0; }
