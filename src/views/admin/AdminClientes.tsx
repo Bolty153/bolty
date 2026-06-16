@@ -84,9 +84,10 @@ export default function AdminClientes({ onImpersonate }: Props) {
 
     // UPSERT: crea la fila en profiles si no existe, o la actualiza si ya existe.
     // UPDATE silencioso era el problema: si no había fila, no fallaba pero tampoco hacía nada.
+    // email es NOT NULL en profiles, así que siempre hay que mandarlo (si no, el upsert falla).
     const { error: profErr } = await supabase
       .from('profiles')
-      .upsert({ id: c.id, is_active: newActive, is_admin: false })
+      .upsert({ id: c.id, email: c.email, is_active: newActive, is_admin: false })
 
     if (profErr) {
       setOpErr(
@@ -118,7 +119,7 @@ export default function AdminClientes({ onImpersonate }: Props) {
     if (!confirm(`¿Suspender a ${c.business_name || c.email}?\nNo podrá entrar hasta que lo reactives.`)) return
     setUpdatingId(c.id)
     await Promise.all([
-      supabase.from('profiles').update({ is_active: false }).eq('id', c.id),
+      supabase.from('profiles').upsert({ id: c.id, email: c.email, is_active: false, is_admin: false }),
       supabase.from('clients').update({ status: 'suspended', updated_at: new Date().toISOString() }).eq('id', c.id),
     ])
     await logActivity('suspend_client', c.id, 'client')
@@ -151,7 +152,7 @@ export default function AdminClientes({ onImpersonate }: Props) {
 
       const isActive = form.status === 'active' || form.status === 'trial'
       const [profRes, clientRes] = await Promise.all([
-        supabase.from('profiles').upsert({ id: uid, is_active: isActive, is_admin: false }),
+        supabase.from('profiles').upsert({ id: uid, email: form.email.trim(), is_active: isActive, is_admin: false }),
         supabase.from('clients').insert({
           id: uid, email: form.email.trim(),
           business_name: form.business_name || null,
@@ -180,7 +181,7 @@ export default function AdminClientes({ onImpersonate }: Props) {
     setSaving(true); setFormErr('')
     const isActive = form.status === 'active' || form.status === 'trial'
     const [profRes, clientRes] = await Promise.all([
-      supabase.from('profiles').upsert({ id: editClient.id, is_active: isActive, is_admin: false }),
+      supabase.from('profiles').upsert({ id: editClient.id, email: editClient.email, is_active: isActive, is_admin: false }),
       supabase.from('clients').update({
         business_name: form.business_name || null,
         whatsapp: form.whatsapp || null,
