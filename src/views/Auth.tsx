@@ -19,7 +19,11 @@ function EyeOffIcon() {
   )
 }
 
-export default function Auth() {
+interface Props {
+  onBack?: () => void
+}
+
+export default function Auth({ onBack }: Props) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -53,32 +57,38 @@ export default function Auth() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', padding: '24px', background: 'var(--bg)',
-    }}>
-      <div style={{ width: '100%', maxWidth: '420px' }}>
+    <div className="auth-mesh">
+      <div className="auth-col">
 
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+        {onBack && (
+          <button type="button" className="auth-back" onClick={onBack}>
+            <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="15" height="15">
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            Volver
+          </button>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '24px' }}>
           <div className="brand-logo" style={{
-            width: '84px', height: '84px', borderRadius: '22px',
-            margin: '0 auto 18px',
+            width: '68px', height: '68px', borderRadius: '20px',
+            boxShadow: '0 16px 30px rgba(91,33,182,.55)',
           }}>
-            <svg viewBox="5 3 28 32" fill="none" style={{ width: '66px', height: '66px' }}>
+            <svg viewBox="5 3 28 32" fill="none" style={{ width: '54px', height: '54px' }}>
               <text x="7" y="32" fontFamily="'Space Grotesk',sans-serif" fontWeight="700" fontSize="38" fill="#fff">B</text>
               <path d="M26 6 L17 21 H23 L20.5 33 L31 17 H25 L27.5 6 Z" fill="#00c896" />
             </svg>
           </div>
-          <h1 style={{ fontSize: '36px', letterSpacing: '0.18em', marginBottom: '6px' }}>B.O.L.T.Y</h1>
-          <p style={{ color: 'var(--ink-soft)', fontSize: '13px', letterSpacing: '0.04em', marginBottom: '10px' }}>
-            <b>B</b>usiness <b>O</b>nline <b>L</b>ive <b>T</b>echnology for <b>Y</b>ou
+          <h1 style={{ fontSize: '30px', letterSpacing: '0.14em', color: '#fff', marginTop: '16px' }}>B.O.L.T.Y</h1>
+          <p style={{ color: 'rgba(255,255,255,.76)', fontSize: '12.5px', letterSpacing: '0.01em', marginTop: '8px' }}>
+            <b style={{ color: '#fff' }}>B</b>usiness <b style={{ color: '#fff' }}>O</b>nline <b style={{ color: '#fff' }}>L</b>ive <b style={{ color: '#fff' }}>T</b>echnology for <b style={{ color: '#fff' }}>Y</b>ou
           </p>
-          <p style={{ color: 'var(--ink-faint)', fontSize: '13px' }}>
+          <p style={{ color: 'rgba(255,255,255,.55)', fontSize: '13px', marginTop: '10px' }}>
             Iniciá sesión para acceder a tu panel
           </p>
         </div>
 
-        <div className="card">
+        <div className="auth-card">
           <form onSubmit={handleSubmit}>
             <div className="field">
               <label>Email</label>

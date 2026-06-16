@@ -9,6 +9,7 @@ import Reportes from './views/Reportes'
 import Agenda from './views/Agenda'
 import Canales from './views/Canales'
 import Auth from './views/Auth'
+import Landing from './views/Landing'
 import Admin from './views/admin/Admin'
 
 export type ViewId = 'inicio' | 'agente' | 'funciones' | 'reportes' | 'agenda' | 'canales'
@@ -76,6 +77,7 @@ function AccessDenied() {
 
 function AppContent() {
   const { session, profile, loading } = useAuth()
+  const [showLanding, setShowLanding] = useState(true)
 
   if (loading) {
     return (
@@ -88,7 +90,10 @@ function AppContent() {
     )
   }
 
-  if (!session) return <Auth />
+  if (!session) {
+    if (showLanding) return <Landing onEnter={() => setShowLanding(false)} />
+    return <Auth onBack={() => setShowLanding(true)} />
+  }
   if (!profile || !profile.is_active) return <AccessDenied />
   if (profile.is_admin) return <Admin />
   return <Dashboard />
