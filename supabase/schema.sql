@@ -116,3 +116,96 @@ create policy "logos_update_own" on storage.objects
   for update using (
     bucket_id = 'logos' and auth.uid()::text = (storage.foldername(name))[1]
   );
+
+-- =====================================================================
+-- 5) Inventario de productos
+-- =====================================================================
+create table if not exists public.products (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  name        text not null,
+  price       numeric(12,2) not null default 0,
+  stock       integer not null default 0,
+  category    text,
+  description text,
+  image_url   text,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+-- Código de barras opcional (para negocios que usan lector)
+alter table public.products add column if not exists barcode text;
+
+create index if not exists products_user_id_idx on public.products(user_id);
+create index if not exists products_barcode_idx on public.products(user_id, barcode);
+
+-- RLS: cada cliente sólo ve y toca SUS productos
+alter table public.products enable row level security;
+
+drop policy if exists "products_select_own" on public.products;
+create policy "products_select_own" on public.products
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "products_insert_own" on public.products;
+create policy "products_insert_own" on public.products
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "products_update_own" on public.products;
+create policy "products_update_own" on public.products
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "products_delete_own" on public.products;
+create policy "products_delete_own" on public.products
+  for delete using (auth.uid() = user_id);
+
+grant select, insert, update, delete on public.products to anon, authenticated;
+
+-- Bucket de fotos de productos (path: {uid}/archivo.ext)
+insert into storage.buckets (id, name, public)
+values ('productos', 'productos', true)
+on conflict (id) do nothing;
+
+drop policy if exists "productos_read" on storage.objects;
+create policy "productos_read" on storage.objects
+  for select using (bucket_id = 'productos');
+
+drop policy if exists "productos_write_own" on storage.objects;
+create policy "productos_write_own" on storage.objects
+  for insert with check (
+    bucket_id = 'productos' and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+drop policy if exists "productos_update_own" on storage.objects;
+create policy "productos_update_own" on storage.objects
+  for update using (
+    bucket_id = 'productos' and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+drop policy if exists "productos_delete_own" on storage.objects;
+create policy "productos_delete_own" on storage.objects
+  for delete using (
+    bucket_id = 'productos' and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- =====================================================================
+-- 6) Bucket de remitos (comprobantes de mercadería que llega)
+-- =====================================================================
+insert into storage.buckets (id, name, public)
+values ('remitos', 'remitos', true)
+on conflict (id) do nothing;
+
+drop policy if exists "remitos_read" on storage.objects;
+create policy "remitos_read" on storage.objects
+  for select using (bucket_id = 'remitos');
+
+drop policy if exists "remitos_write_own" on storage.objects;
+create policy "remitos_write_own" on storage.objects
+  for insert with check (
+    bucket_id = 'remitos' and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+drop policy if exists "remitos_delete_own" on storage.objects;
+create policy "remitos_delete_own" on storage.objects
+  for delete using (
+    bucket_id = 'remitos' and auth.uid()::text = (storage.foldername(name))[1]
+  );

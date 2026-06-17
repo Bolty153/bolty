@@ -1,5 +1,6 @@
 import { useBusinessContext } from '../context/BusinessContext'
 import type { Day } from '../context/BusinessContext'
+import { useProducts, LOW_STOCK_THRESHOLD } from '../hooks/useProducts'
 import type { ViewId } from '../App'
 
 const DAY_SHORT: Record<Day, string> = {
@@ -14,6 +15,10 @@ interface Props {
 
 export default function Inicio({ onNavigate }: Props) {
   const { business, agent, loading } = useBusinessContext()
+  const { products } = useProducts()
+
+  const lowStock = products.filter(p => p.stock <= LOW_STOCK_THRESHOLD)
+  const outStock = lowStock.filter(p => p.stock === 0)
 
   if (loading) {
     return (
@@ -136,6 +141,32 @@ export default function Inicio({ onNavigate }: Props) {
           <div className="kpi-trend" style={{ color: 'var(--ink-faint)', fontWeight: 500 }}>Todo tranquilo</div>
         </div>
       </div>
+
+      {/* Aviso de stock bajo */}
+      {lowStock.length > 0 && (
+        <div className="alert" style={{ marginBottom: 22, cursor: 'pointer' }} onClick={() => onNavigate('productos')}>
+          <div className="alert-ic" style={{ background: 'var(--amber-wash)', color: 'var(--amber)' }}>
+            <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              <path d="M12 9v4M12 17h.01" />
+            </svg>
+          </div>
+          <div className="alert-b">
+            <h4>
+              {outStock.length > 0
+                ? `${outStock.length} producto${outStock.length === 1 ? '' : 's'} sin stock`
+                : `${lowStock.length} producto${lowStock.length === 1 ? '' : 's'} por agotarse`}
+            </h4>
+            <p>
+              {outStock.length > 0 && `${outStock.length} agotado${outStock.length === 1 ? '' : 's'}. `}
+              Tenés {lowStock.length} producto{lowStock.length === 1 ? '' : 's'} con stock bajo. Revisalos para reponer.
+            </p>
+          </div>
+          <span className="alert-go">
+            <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg>
+          </span>
+        </div>
+      )}
 
       {/* Primeros pasos + Horarios */}
       <div className="grid-2">

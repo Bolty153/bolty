@@ -10,12 +10,13 @@ import Reportes from './views/Reportes'
 import Agenda from './views/Agenda'
 import Canales from './views/Canales'
 import MiNegocio from './views/MiNegocio'
+import Productos from './views/Productos'
 import Onboarding from './views/Onboarding'
 import Auth from './views/Auth'
 import Landing from './views/Landing'
 import Admin from './views/admin/Admin'
 
-export type ViewId = 'inicio' | 'agente' | 'funciones' | 'reportes' | 'agenda' | 'canales' | 'negocio'
+export type ViewId = 'inicio' | 'agente' | 'funciones' | 'reportes' | 'agenda' | 'canales' | 'negocio' | 'productos'
 
 function renderView(view: ViewId, onNavigate: (v: ViewId) => void) {
   switch (view) {
@@ -26,6 +27,7 @@ function renderView(view: ViewId, onNavigate: (v: ViewId) => void) {
     case 'agenda':    return <Agenda />
     case 'canales':   return <Canales />
     case 'negocio':   return <MiNegocio />
+    case 'productos': return <Productos />
   }
 }
 
