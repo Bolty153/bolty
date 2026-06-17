@@ -1,60 +1,26 @@
-import { useState } from 'react'
-
-const days = [
-  { label: 'Lun', num: 16 },
-  { label: 'Mar', num: 17 },
-  { label: 'Mié', num: 18 },
-  { label: 'Jue', num: 19 },
-  { label: 'Vie', num: 20 },
-  { label: 'Sáb', num: 21 },
-]
-
-const appointments = [
-  { time: '09:00', type: 'm', title: 'Consulta — Rocky (labrador)', detail: 'Martín G. · Vacunación anual' },
-  { time: '10:30', type: '', title: 'Control — Michi (gato)', detail: 'Laura P. · Seguimiento' },
-  { time: '12:00', type: null, title: '', detail: '' },
-  { time: '15:00', type: 'a', title: 'Peluquería — Toby (caniche)', detail: 'Sofía R. · Baño y corte' },
-  { time: '16:30', type: '', title: 'Consulta — Luna (gata)', detail: 'Pedro M. · Desparasitación' },
-]
+import { useBusinessContext } from '../context/BusinessContext'
 
 export default function Agenda() {
-  const [selectedDay, setSelectedDay] = useState(17)
-
-  const dayName = days.find(d => d.num === selectedDay)?.label ?? ''
+  const { agent } = useBusinessContext()
+  const agentName = agent.agent_name || 'Bolty'
 
   return (
     <>
       <div className="page-head">
         <div className="greet">
-          <div><h1>Agenda y turnos</h1><div className="sub">Lo que Pelusa reservó por vos</div></div>
+          <div><h1>Agenda y turnos</h1><div className="sub">Los turnos que {agentName} reserva por vos</div></div>
         </div>
       </div>
 
-      <div className="ahead">
-        {days.map(d => (
-          <div key={d.num} className={`dp${selectedDay === d.num ? ' sel' : ''}`} onClick={() => setSelectedDay(d.num)}>
-            <span>{d.label}</span><small>{d.num}</small>
-          </div>
-        ))}
-      </div>
-
       <div className="card">
-        <div className="card-h"><h3>Turnos de hoy · {dayName} {selectedDay}</h3></div>
-        <div className="sub">Reservados solos desde WhatsApp</div>
-        <div className="cal">
-          {appointments.map((a, i) => (
-            <>
-              <div key={`h-${i}`} className="ch">{a.time}</div>
-              <div key={`s-${i}`} className="cs">
-                {a.type !== null && a.title && (
-                  <div className={`appt${a.type ? ` ${a.type}` : ''}`}>
-                    <h5>{a.title}</h5>
-                    <span>{a.detail}</span>
-                  </div>
-                )}
-              </div>
-            </>
-          ))}
+        <div className="card-h"><h3>Próximos turnos</h3></div>
+        <div className="sub">Reservados solos desde WhatsApp, Instagram o tu web</div>
+        <div className="empty-state" style={{ marginTop: 6, minHeight: 180 }}>
+          <svg fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" width="38" height="38">
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <path d="M16 2v4M8 2v4M3 10h18" />
+          </svg>
+          <p>Todavía no hay turnos. Cuando un cliente reserve, lo vas a ver acá automáticamente.</p>
         </div>
       </div>
     </>

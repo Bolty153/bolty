@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { BusinessProvider, useBusinessContext } from './context/BusinessContext'
 import TopNav from './components/layout/TopNav'
 import Sidebar from './components/layout/Sidebar'
 import Inicio from './views/Inicio'
@@ -8,37 +9,70 @@ import Funciones from './views/Funciones'
 import Reportes from './views/Reportes'
 import Agenda from './views/Agenda'
 import Canales from './views/Canales'
+import MiNegocio from './views/MiNegocio'
+import Onboarding from './views/Onboarding'
 import Auth from './views/Auth'
 import Landing from './views/Landing'
 import Admin from './views/admin/Admin'
 
-export type ViewId = 'inicio' | 'agente' | 'funciones' | 'reportes' | 'agenda' | 'canales'
+export type ViewId = 'inicio' | 'agente' | 'funciones' | 'reportes' | 'agenda' | 'canales' | 'negocio'
 
-function renderView(view: ViewId) {
+function renderView(view: ViewId, onNavigate: (v: ViewId) => void) {
   switch (view) {
-    case 'inicio':    return <Inicio />
+    case 'inicio':    return <Inicio onNavigate={onNavigate} />
     case 'agente':    return <Agente />
     case 'funciones': return <Funciones />
     case 'reportes':  return <Reportes />
     case 'agenda':    return <Agenda />
     case 'canales':   return <Canales />
+    case 'negocio':   return <MiNegocio />
   }
 }
 
-function Dashboard() {
+function DashboardContent() {
   const [view, setView] = useState<ViewId>('inicio')
+  const { business, agent, loading } = useBusinessContext()
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', color: 'var(--ink-faint)', fontSize: '14px',
+      }}>
+        Cargando…
+      </div>
+    )
+  }
+
+  if (!business.onboarding_complete) {
+    return <Onboarding />
+  }
+
+  // Si el negocio es "Solo productos", el módulo de Agenda no aplica:
+  // no se muestra en el menú y si estuviera seleccionado, caemos a Inicio.
+  const showAgenda = agent.business_type !== 'Solo productos'
+  const safeView: ViewId = (view === 'agenda' && !showAgenda) ? 'inicio' : view
+
   return (
     <>
       <TopNav />
       <div className="shell">
-        <Sidebar activeView={view} onNavigate={setView} />
+        <Sidebar activeView={safeView} onNavigate={setView} showAgenda={showAgenda} />
         <main className="main">
-          <div key={view} className="view-anim">
-            {renderView(view)}
+          <div key={safeView} className="view-anim">
+            {renderView(safeView, setView)}
           </div>
         </main>
       </div>
     </>
+  )
+}
+
+function Dashboard() {
+  return (
+    <BusinessProvider>
+      <DashboardContent />
+    </BusinessProvider>
   )
 }
 
@@ -66,8 +100,7 @@ function AccessDenied() {
           Tu cuenta existe pero todavía no tiene acceso al panel de Bolty.
           Contactá al administrador para que la active.
         </p>
-        <button className="btn" onClick={signOut}
-          style={{ background: 'var(--ink)', boxShadow: 'none' }}>
+        <button className="btn" onClick={signOut} style={{ background: 'var(--ink)', boxShadow: 'none' }}>
           Cerrar sesión
         </button>
       </div>
@@ -78,6 +111,12 @@ function AccessDenied() {
 function AppContent() {
   const { session, profile, loading } = useAuth()
   const [showLanding, setShowLanding] = useState(true)
+
+  // Sin sesión SIEMPRE arrancamos por la landing. Al cerrar sesión, volvemos
+  // a mostrarla (y no saltar directo al login del intento anterior).
+  useEffect(() => {
+    if (!session) setShowLanding(true)
+  }, [session])
 
   if (loading) {
     return (

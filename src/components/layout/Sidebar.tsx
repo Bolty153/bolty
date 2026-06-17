@@ -3,6 +3,7 @@ import type { ViewId } from '../../App'
 interface Props {
   activeView: ViewId
   onNavigate: (view: ViewId) => void
+  showAgenda: boolean
 }
 
 interface NavItemDef {
@@ -19,6 +20,18 @@ const mainNav: NavItemDef[] = [
       <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
         <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
         <path d="M9 22V12h6v10" />
+      </svg>
+    ),
+  },
+  {
+    id: 'negocio',
+    label: 'Mi negocio',
+    icon: (
+      <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="M3 9l1-6h16l1 6" />
+        <path d="M3 9a2 2 0 002 2 2 2 0 002-2 2 2 0 002 2 2 2 0 002-2 2 2 0 002 2 2 2 0 002-2" />
+        <path d="M5 11v9h14v-9" />
+        <path d="M10 15h4v5h-4z" />
       </svg>
     ),
   },
@@ -57,29 +70,31 @@ const mainNav: NavItemDef[] = [
   },
 ]
 
-const servicesNav: NavItemDef[] = [
-  {
-    id: 'agenda',
-    label: 'Agenda y turnos',
-    icon: (
-      <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-        <rect x="3" y="4" width="18" height="18" rx="2" />
-        <path d="M16 2v4M8 2v4M3 10h18" />
-      </svg>
-    ),
-  },
-  {
-    id: 'canales',
-    label: 'Canales',
-    icon: (
-      <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-        <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
-      </svg>
-    ),
-  },
-]
+const agendaNav: NavItemDef = {
+  id: 'agenda',
+  label: 'Agenda y turnos',
+  icon: (
+    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  ),
+}
 
-export default function Sidebar({ activeView, onNavigate }: Props) {
+const canalesNav: NavItemDef = {
+  id: 'canales',
+  label: 'Canales',
+  icon: (
+    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
+    </svg>
+  ),
+}
+
+export default function Sidebar({ activeView, onNavigate, showAgenda }: Props) {
+  // Canales se muestra siempre; Agenda sólo si el negocio trabaja con turnos.
+  const servicesNav: NavItemDef[] = showAgenda ? [agendaNav, canalesNav] : [canalesNav]
+
   return (
     <aside className="side">
       <div className="nav-label">Tu negocio</div>

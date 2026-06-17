@@ -54,6 +54,8 @@ const ICONS = {
   chart: <><path d="M3 3v18h18" /><path d="M18 9l-5 5-3-3-4 4" /></>,
   bell: <><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></>,
   globe: <><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15 15 0 010 20 15 15 0 010-20z" /></>,
+  instagram: <><rect x="2" y="2" width="20" height="20" rx="5" /><circle cx="12" cy="12" r="4" /><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" strokeWidth="3" /></>,
+  chat: <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />,
   paw: <><circle cx="6" cy="9" r="2" /><circle cx="11" cy="5.5" r="2" /><circle cx="16" cy="5.5" r="2" /><circle cx="20" cy="9" r="2" /><path d="M9 18.5c0-2.5 2-4.5 4-4.5s4 2 4 4.5-1.8 3.5-4 3.5-4-1-4-3.5z" /></>,
   wrench: <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.4-3.4a6 6 0 01-7.9 7.9L4.7 22.3a2.1 2.1 0 01-3-3L10.2 11A6 6 0 0118.1 3.1l-3.4 3.2z" />,
   scissors: <><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12" /></>,
@@ -83,7 +85,8 @@ const STEPS = [
 ]
 
 const FEATURES = [
-  { t: 'WhatsApp, Instagram y web', d: 'Atendé todos tus canales desde un solo lugar, sin perseguir mensajes.', ic: ICONS.whatsapp, bg: 'var(--mint-wash)', c: '#018a66' },
+  { t: 'WhatsApp, Instagram y chat web', d: 'Bolty atiende los tres canales en simultáneo. Tus clientes te escriben donde quieren, él responde en cada uno.', ic: ICONS.whatsapp, bg: 'var(--mint-wash)', c: '#018a66' },
+  { t: 'Responde en cualquier idioma', d: 'Detecta automáticamente el idioma del cliente y le responde en el mismo. Inglés, portugués, francés y más. Sin configurar nada.', ic: ICONS.globe, bg: 'var(--volt-wash)', c: 'var(--volt)' },
   { t: 'Entiende audios', d: '¿Tu cliente te manda un audio? Bolty lo escucha y responde como una persona.', ic: ICONS.mic, bg: 'var(--volt-wash)', c: 'var(--volt)' },
   { t: 'Lee fotos de productos', d: 'Le mandan una foto y Bolty identifica de qué producto se trata.', ic: ICONS.camera, bg: 'var(--amber-wash)', c: 'var(--amber)' },
   { t: 'Stock en tiempo real', d: 'Nunca más le digas a un cliente "no sé si tengo". Bolty lo sabe al instante.', ic: ICONS.box, bg: 'var(--rose-wash)', c: 'var(--rose)' },
@@ -136,6 +139,8 @@ const PLANS = [
 const FAQS = [
   { q: '¿Necesito saber de tecnología para usarlo?', a: 'No. Vos cargás la información de tu negocio en un panel simple, en español, y Bolty hace el resto. No hay que programar ni instalar nada.' },
   { q: '¿Funciona con mi WhatsApp actual o necesito uno nuevo?', a: 'Funciona con tu número de siempre. No perdés tus contactos, tu historial ni tu identidad. Bolty se integra, no te hace empezar de cero.' },
+  { q: '¿Puedo conectar Instagram además de WhatsApp?', a: 'Sí. Bolty se conecta a tu WhatsApp, a los mensajes directos de Instagram y a un chat en tu sitio web. Los tres canales quedan unificados en un solo panel, sin que tengas que saltar de app en app.' },
+  { q: '¿Bolty puede responder en otros idiomas además del español?', a: 'Sí. Si un cliente te escribe en inglés, portugués, francés u otro idioma, Bolty detecta el idioma automáticamente y le responde en ese mismo idioma. No hay que configurar nada extra. Es ideal para negocios que atienden turistas o clientes del exterior.' },
   { q: '¿Cuánto tarda en estar listo y funcionando?', a: 'Por lo general, en minutos. Cargás tu negocio, conectás tu WhatsApp y Bolty ya puede empezar a atender.' },
   { q: '¿Bolty puede inventar respuestas o decir cosas que no sabe?', a: 'No. Cuando una consulta es compleja o no tiene la info, Bolty te la deriva a vos en el momento en lugar de improvisar.' },
   { q: '¿Puedo cancelar cuando quiera?', a: 'Sí, sin letra chica. El acceso lo administramos nosotros para darte una atención más personal, y podés dar de baja cuando quieras.' },
@@ -169,11 +174,11 @@ export default function Landing({ onEnter }: Props) {
         </div>
 
         <div className="landing-hero-inner">
-          <span className="landing-eyebrow">🤖 Agente de IA para WhatsApp</span>
+          <span className="landing-eyebrow">🤖 Agente de IA multicanal · 24/7</span>
           <h1>El empleado que tu negocio <b>necesitaba</b>, y todavía no tenía</h1>
           <p>
-            Bolty atiende tu WhatsApp, responde al instante, agenda turnos y vende por vos,
-            las 24 horas, los 365 días del año. Sin descanso, sin mal humor, sin faltar nunca.
+            Bolty atiende tu WhatsApp, Instagram y el chat de tu web, responde al instante en
+            cualquier idioma, agenda turnos y vende por vos, las 24 horas, los 365 días del año.
           </p>
           <div className="landing-cta">
             <button className="landing-btn-primary" onClick={onEnter}>Ingresar</button>
@@ -281,6 +286,54 @@ export default function Landing({ onEnter }: Props) {
                 </div>
               </Reveal>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== DIFERENCIALES ===== */}
+      <section className="lp-section tight" id="diferencial">
+        <div className="lp-wrap">
+          <Reveal>
+            <div className="lp-head">
+              <span className="lp-eyebrow">Por qué Bolty es diferente</span>
+              <h2>Dos ventajas que muy pocos agentes tienen</h2>
+              <p>Bolty llega a tus clientes donde estén y habla en su idioma. Sin que vos tengas que hacer nada.</p>
+            </div>
+          </Reveal>
+          <div className="lp-dual-grid">
+            <Reveal>
+              <div className="lp-dual-card lp-dual-multi">
+                <span className="lp-dual-tag">Multicanal</span>
+                <h3>Atiende donde tus clientes te escriben</h3>
+                <p>
+                  WhatsApp, Instagram y un chat en tu sitio web. Bolty cubre los tres canales al mismo tiempo
+                  y une todas las conversaciones en un solo lugar. Nunca más vayas a buscar mensajes en tres apps distintas.
+                </p>
+                <div className="lp-channel-row">
+                  <div className="lp-channel-chip wapp"><Icon d={ICONS.whatsapp} /> WhatsApp</div>
+                  <div className="lp-channel-chip insta"><Icon d={ICONS.instagram} /> Instagram</div>
+                  <div className="lp-channel-chip web"><Icon d={ICONS.chat} /> Chat web</div>
+                </div>
+              </div>
+            </Reveal>
+            <Reveal delay={130}>
+              <div className="lp-dual-card lp-dual-lang">
+                <span className="lp-dual-tag">Multi-idioma</span>
+                <h3>Responde en el idioma de tu cliente</h3>
+                <p>
+                  ¿Te escriben en inglés, portugués o francés? Bolty detecta el idioma automáticamente
+                  y contesta en ese mismo idioma. Ideal para negocios que atienden turistas o clientes del exterior.
+                </p>
+                <div className="lp-lang-row">
+                  <span className="lp-lang-pill">🇦🇷 Español</span>
+                  <span className="lp-lang-pill">🇺🇸 English</span>
+                  <span className="lp-lang-pill">🇧🇷 Português</span>
+                  <span className="lp-lang-pill">🇫🇷 Français</span>
+                  <span className="lp-lang-pill">🇮🇹 Italiano</span>
+                  <span className="lp-lang-pill">+ más</span>
+                </div>
+              </div>
+            </Reveal>
           </div>
         </div>
       </section>

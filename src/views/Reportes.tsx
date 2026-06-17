@@ -1,23 +1,3 @@
-const topQuestions = [
-  { q: '¿Hacen envíos a domicilio?', pct: '92%', count: 88 },
-  { q: '¿Atienden los domingos?', pct: '74%', count: 61 },
-  { q: '¿Aceptan Mercado Pago?', pct: '60%', count: 49 },
-  { q: '¿Tienen planes de vacunación?', pct: '41%', count: 34 },
-]
-
-const topProducts = [
-  { name: 'Alimento Premium 15kg', pct: '85%', count: 72 },
-  { name: 'Pipeta perro mediano', pct: '67%', count: 55 },
-  { name: 'Arena sanitaria gato', pct: '50%', count: 41 },
-]
-
-const weekSummary = [
-  { label: 'Consultas atendidas', value: '312', color: '' },
-  { label: 'Terminaron en venta', value: '47', color: 'var(--mint)' },
-  { label: 'Turnos reservados', value: '23', color: '' },
-  { label: 'Clientes recuperados', value: '9', color: 'var(--mint)' },
-]
-
 export default function Reportes() {
   return (
     <>
@@ -30,24 +10,12 @@ export default function Reportes() {
       <div className="card" style={{ marginBottom: 18 }}>
         <div className="card-h"><h3>¿Qué pregunta la gente?</h3></div>
         <div className="sub">Las dudas más repetidas de la semana — oportunidades para mejorar</div>
-        {topQuestions.map((item, i) => (
-          <div key={i} className="rank">
-            <div className="rank-n">{i + 1}</div>
-            <div className="rank-nm">{item.q}</div>
-            <div className="rank-bar"><i style={{ width: item.pct }} /></div>
-            <div className="rank-c">{item.count}</div>
-          </div>
-        ))}
-        <div className="alert" style={{ marginTop: 16, cursor: 'default' }}>
-          <div className="alert-ic" style={{ background: 'var(--volt-wash)', color: 'var(--volt)' }}>
-            <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M9.66 18L9 21h6l-.66-3M12 2v1M12 12a4 4 0 004-4 4 4 0 00-8 0 4 4 0 004 4z" />
-            </svg>
-          </div>
-          <div className="alert-b">
-            <h4>Sugerencia de Bolty</h4>
-            <p>88 personas preguntaron por envíos. Conviene aclararlo en tu perfil, o evaluar empezar a ofrecerlos.</p>
-          </div>
+        <div className="empty-state" style={{ marginTop: 6 }}>
+          <svg fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" width="36" height="36">
+            <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" />
+            <circle cx="12" cy="12" r="10" />
+          </svg>
+          <p>Todavía no hay datos. Cuando Bolty empiece a responder, vas a ver acá las preguntas más frecuentes de tus clientes.</p>
         </div>
       </div>
 
@@ -55,26 +23,22 @@ export default function Reportes() {
         <div className="card">
           <div className="card-h"><h3>Lo más consultado</h3></div>
           <div className="sub">Productos que sí tenés y más se piden</div>
-          {topProducts.map((item, i) => (
-            <div key={i} className="rank">
-              <div className="rank-n">{i + 1}</div>
-              <div className="rank-nm">{item.name}</div>
-              <div className="rank-bar"><i style={{ width: item.pct }} /></div>
-              <div className="rank-c">{item.count}</div>
-            </div>
-          ))}
+          <div className="empty-state" style={{ marginTop: 6 }}>
+            <svg fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" width="32" height="32">
+              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 01-8 0" />
+            </svg>
+            <p>Todavía no hay datos para mostrar.</p>
+          </div>
         </div>
 
         <div className="card">
           <div className="card-h"><h3>Tu parte</h3></div>
           <div className="sub">La semana de un vistazo</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 15, marginTop: 4 }}>
-            {weekSummary.map(item => (
-              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 13.5, color: 'var(--ink-soft)' }}>{item.label}</span>
-                <span style={{ fontFamily: "'Space Grotesk'", fontWeight: 700, fontSize: 19, color: item.color || 'inherit' }}>{item.value}</span>
-              </div>
-            ))}
+          <div className="empty-state" style={{ marginTop: 6 }}>
+            <svg fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" width="32" height="32">
+              <path d="M3 3v18h18" /><path d="M18 17V9M13 17V5M8 17v-3" />
+            </svg>
+            <p>Todavía no hay datos. Tu resumen semanal aparece cuando haya actividad.</p>
           </div>
         </div>
       </div>

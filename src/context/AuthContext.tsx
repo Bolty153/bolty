@@ -40,8 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false
 
-    // Carga inicial: primero sesión, después perfil, en secuencia.
-    // Así el cliente de Supabase ya tiene el JWT listo cuando hacemos la query.
+    // Carga inicial: obtiene la sesión desde localStorage y carga el perfil.
+    // Todo lo que ocurre después (refreshes automáticos) se maneja en onAuthStateChange.
     async function init() {
       const { data } = await supabase.auth.getSession()
       const sess = data.session
@@ -59,18 +59,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     init()
 
-    // Cambios posteriores (login / logout).
-    // Saltamos INITIAL_SESSION porque ya lo maneja init() arriba.
-    // Sin este skip, onAuthStateChange pisaba el resultado de init() con null.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, sess) => {
+        // init() ya resolvió el estado inicial; ignoramos esta notificación duplicada.
         if (event === 'INITIAL_SESSION') return
-
         if (cancelled) return
-        setSession(sess)
 
+        if (event === 'TOKEN_REFRESHED') {
+          // El cliente refrescó el JWT automáticamente (pasa cada ~1 hora o al volver
+          // al tab). Solo actualizamos el objeto de sesión con el nuevo access token.
+          // No mostramos spinner ni volvemos a pedir el perfil — eso causaba el bug
+          // de "sesión cerrada" al cambiar de pestaña.
+          setSession(sess)
+          return
+        }
+
+        if (event === 'SIGNED_OUT') {
+          setSession(null)
+          setProfile(null)
+          setLoading(false)
+          return
+        }
+
+        // SIGNED_IN, USER_UPDATED, PASSWORD_RECOVERY, etc.
+        // Usamos setLoading(true) mientras buscamos el perfil para que la UI
+        // muestre el spinner en vez de mostrar <AccessDenied> durante el await.
+        setLoading(true)
+        setSession(sess)
         if (sess) {
-          setLoading(true)
           const p = await fetchProfile(sess.user.id)
           if (!cancelled) {
             setProfile(p)
@@ -78,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } else {
           setProfile(null)
+          setLoading(false)
         }
       }
     )

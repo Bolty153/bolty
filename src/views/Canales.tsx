@@ -1,8 +1,8 @@
 const channels = [
   {
     name: 'WhatsApp',
-    detail: '+54 9 341 555-0142',
-    connected: true,
+    detail: 'Conectá tu propio número de WhatsApp Business',
+    connected: false,
     iconStyle: { background: 'var(--mint-wash)', color: 'var(--mint)' },
     icon: (
       <svg fill="currentColor" viewBox="0 0 24 24">
@@ -12,8 +12,8 @@ const channels = [
   },
   {
     name: 'Instagram',
-    detail: '@veterinaria.centro',
-    connected: true,
+    detail: 'Conectá la cuenta de Instagram de tu negocio',
+    connected: false,
     iconStyle: { background: '#fce4f0', color: '#d6248f' },
     icon: (
       <svg fill="currentColor" viewBox="0 0 24 24">
