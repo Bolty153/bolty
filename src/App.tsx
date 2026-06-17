@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import { BusinessProvider, useBusinessContext } from './context/BusinessContext'
+import { BusinessProvider, useBusinessContext, getBusinessFlags } from './context/BusinessContext'
 import TopNav from './components/layout/TopNav'
 import Sidebar from './components/layout/Sidebar'
 import Inicio from './views/Inicio'
@@ -11,12 +11,13 @@ import Agenda from './views/Agenda'
 import Canales from './views/Canales'
 import MiNegocio from './views/MiNegocio'
 import Productos from './views/Productos'
+import Servicios from './views/Servicios'
 import Onboarding from './views/Onboarding'
 import Auth from './views/Auth'
 import Landing from './views/Landing'
 import Admin from './views/admin/Admin'
 
-export type ViewId = 'inicio' | 'agente' | 'funciones' | 'reportes' | 'agenda' | 'canales' | 'negocio' | 'productos'
+export type ViewId = 'inicio' | 'agente' | 'funciones' | 'reportes' | 'agenda' | 'canales' | 'negocio' | 'productos' | 'servicios'
 
 function renderView(view: ViewId, onNavigate: (v: ViewId) => void) {
   switch (view) {
@@ -28,6 +29,7 @@ function renderView(view: ViewId, onNavigate: (v: ViewId) => void) {
     case 'canales':   return <Canales />
     case 'negocio':   return <MiNegocio />
     case 'productos': return <Productos />
+    case 'servicios': return <Servicios />
   }
 }
 
@@ -50,16 +52,26 @@ function DashboardContent() {
     return <Onboarding />
   }
 
-  // Si el negocio es "Solo productos", el módulo de Agenda no aplica:
-  // no se muestra en el menú y si estuviera seleccionado, caemos a Inicio.
-  const showAgenda = agent.business_type !== 'Solo productos'
-  const safeView: ViewId = (view === 'agenda' && !showAgenda) ? 'inicio' : view
+  // Según el tipo de negocio se muestran Productos y/o Servicios (y la Agenda).
+  // Si la vista activa no está permitida, caemos a Inicio.
+  const { products: showProductos, services: showServicios, agenda: showAgenda } = getBusinessFlags(agent.business_type)
+  const isAllowed = (v: ViewId) =>
+    v === 'productos' ? showProductos :
+    v === 'servicios' ? showServicios :
+    v === 'agenda' ? showAgenda : true
+  const safeView: ViewId = isAllowed(view) ? view : 'inicio'
 
   return (
     <>
       <TopNav />
       <div className="shell">
-        <Sidebar activeView={safeView} onNavigate={setView} showAgenda={showAgenda} />
+        <Sidebar
+          activeView={safeView}
+          onNavigate={setView}
+          showProductos={showProductos}
+          showServicios={showServicios}
+          showAgenda={showAgenda}
+        />
         <main className="main">
           <div key={safeView} className="view-anim">
             {renderView(safeView, setView)}

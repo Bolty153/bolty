@@ -1226,6 +1226,26 @@ h1,h2,h3,h4,h5,.disp {
 }
 @keyframes scanmove { 0%,100% { top: 20%; } 50% { top: 80%; } }
 
+/* Servicios */
+.svc-duration {
+  display: inline-flex; align-items: center; gap: 5px; align-self: flex-start;
+  font-size: 12.5px; font-weight: 600; color: var(--ink-soft);
+  background: var(--surf-2); padding: 3px 9px; border-radius: 7px;
+}
+.svc-duration svg { color: var(--ink-faint); }
+.svc-consult { color: var(--volt-ink); font-size: 16px; }
+.svc-check {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  font-size: 13px; font-weight: 600; color: var(--ink-2); cursor: pointer;
+}
+.svc-check input { width: 16px; height: 16px; accent-color: var(--volt); cursor: pointer; }
+.svc-dur-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.svc-dur-inputs { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.svc-dur-field { display: flex; align-items: center; gap: 7px; }
+.svc-dur-field input { width: 72px; text-align: center; }
+.svc-dur-field span { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.svc-dur-total { font-size: 13px; font-weight: 600; color: var(--volt-ink); margin-left: 4px; }
+
 @media (max-width: 560px) {
   .prod-grid { grid-template-columns: 1fr 1fr; }
   /* En móvil cada fila del remito se apila para no perder ningún campo */

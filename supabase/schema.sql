@@ -209,3 +209,70 @@ create policy "remitos_delete_own" on storage.objects
   for delete using (
     bucket_id = 'remitos' and auth.uid()::text = (storage.foldername(name))[1]
   );
+
+-- =====================================================================
+-- 7) Servicios (peluquerías, consultorios, talleres, estudios)
+--    No tienen stock. El precio puede ser un número o "a consultar".
+-- =====================================================================
+create table if not exists public.services (
+  id               uuid primary key default gen_random_uuid(),
+  user_id          uuid not null references auth.users(id) on delete cascade,
+  name             text not null,
+  price            numeric(12,2) not null default 0,
+  price_on_request boolean not null default false,
+  duration_min     integer,
+  category         text,
+  description      text,
+  image_url        text,
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
+);
+
+create index if not exists services_user_id_idx on public.services(user_id);
+
+alter table public.services enable row level security;
+
+drop policy if exists "services_select_own" on public.services;
+create policy "services_select_own" on public.services
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "services_insert_own" on public.services;
+create policy "services_insert_own" on public.services
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "services_update_own" on public.services;
+create policy "services_update_own" on public.services
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "services_delete_own" on public.services;
+create policy "services_delete_own" on public.services
+  for delete using (auth.uid() = user_id);
+
+grant select, insert, update, delete on public.services to anon, authenticated;
+
+-- Bucket de fotos de servicios
+insert into storage.buckets (id, name, public)
+values ('servicios', 'servicios', true)
+on conflict (id) do nothing;
+
+drop policy if exists "servicios_read" on storage.objects;
+create policy "servicios_read" on storage.objects
+  for select using (bucket_id = 'servicios');
+
+drop policy if exists "servicios_write_own" on storage.objects;
+create policy "servicios_write_own" on storage.objects
+  for insert with check (
+    bucket_id = 'servicios' and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+drop policy if exists "servicios_update_own" on storage.objects;
+create policy "servicios_update_own" on storage.objects
+  for update using (
+    bucket_id = 'servicios' and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+drop policy if exists "servicios_delete_own" on storage.objects;
+create policy "servicios_delete_own" on storage.objects
+  for delete using (
+    bucket_id = 'servicios' and auth.uid()::text = (storage.foldername(name))[1]
+  );

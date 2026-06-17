@@ -3,6 +3,8 @@ import type { ViewId } from '../../App'
 interface Props {
   activeView: ViewId
   onNavigate: (view: ViewId) => void
+  showProductos: boolean
+  showServicios: boolean
   showAgenda: boolean
 }
 
@@ -32,17 +34,6 @@ const mainNav: NavItemDef[] = [
         <path d="M3 9a2 2 0 002 2 2 2 0 002-2 2 2 0 002 2 2 2 0 002-2 2 2 0 002 2 2 2 0 002-2" />
         <path d="M5 11v9h14v-9" />
         <path d="M10 15h4v5h-4z" />
-      </svg>
-    ),
-  },
-  {
-    id: 'productos',
-    label: 'Inventario',
-    icon: (
-      <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-        <path d="M3 6h18" />
-        <path d="M16 10a4 4 0 01-8 0" />
       </svg>
     ),
   },
@@ -81,6 +72,28 @@ const mainNav: NavItemDef[] = [
   },
 ]
 
+const productosNav: NavItemDef = {
+  id: 'productos',
+  label: 'Inventario',
+  icon: (
+    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+      <path d="M3 6h18" />
+      <path d="M16 10a4 4 0 01-8 0" />
+    </svg>
+  ),
+}
+
+const serviciosNav: NavItemDef = {
+  id: 'servicios',
+  label: 'Servicios',
+  icon: (
+    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path d="M14.7 6.3a4 4 0 00-5.6 5.6l-6 6a2 2 0 102.8 2.8l6-6a4 4 0 005.6-5.6l-2.1 2.1-2.2-.6-.6-2.2z" />
+    </svg>
+  ),
+}
+
 const agendaNav: NavItemDef = {
   id: 'agenda',
   label: 'Agenda y turnos',
@@ -102,14 +115,21 @@ const canalesNav: NavItemDef = {
   ),
 }
 
-export default function Sidebar({ activeView, onNavigate, showAgenda }: Props) {
+export default function Sidebar({ activeView, onNavigate, showProductos, showServicios, showAgenda }: Props) {
+  // Inicio y Mi negocio siempre; luego Productos/Servicios según el tipo de negocio.
+  const catalogNav: NavItemDef[] = [
+    ...(showProductos ? [productosNav] : []),
+    ...(showServicios ? [serviciosNav] : []),
+  ]
+  const fullMainNav: NavItemDef[] = [mainNav[0], mainNav[1], ...catalogNav, ...mainNav.slice(2)]
+
   // Canales se muestra siempre; Agenda sólo si el negocio trabaja con turnos.
   const servicesNav: NavItemDef[] = showAgenda ? [agendaNav, canalesNav] : [canalesNav]
 
   return (
     <aside className="side">
       <div className="nav-label">Tu negocio</div>
-      {mainNav.map(item => (
+      {fullMainNav.map(item => (
         <button
           key={item.id}
           className={`nav-item${activeView === item.id ? ' active' : ''}`}

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useBusinessContext } from '../context/BusinessContext'
+import { useBusinessContext, getBusinessFlags } from '../context/BusinessContext'
 
 const TONES = ['Formal', 'Cercano', 'Divertido', 'Con modismos argentinos']
-const BUSINESS_TYPES = ['Solo productos', 'Solo servicios con turno', 'Productos y turnos']
+const BUSINESS_TYPES = ['Solo productos', 'Solo servicios', 'Productos y servicios']
 
 export default function Agente() {
   const { agent, saving, saveAgent, loading } = useBusinessContext()
@@ -103,11 +103,15 @@ export default function Agente() {
             >{t}</div>
           ))}
         </div>
-        {local.business_type?.includes('turno') && (
-          <div className="hint" style={{ marginTop: 13 }}>
-            Como elegiste turnos, tenés activo el módulo de Agenda en tu menú.
-          </div>
-        )}
+        {(() => {
+          const f = getBusinessFlags(local.business_type)
+          const txt = f.products && f.services
+            ? 'Ves las secciones de Inventario y Servicios en tu menú.'
+            : f.services
+              ? 'Ves la sección de Servicios y el módulo de Agenda en tu menú.'
+              : 'Ves la sección de Inventario en tu menú.'
+          return <div className="hint" style={{ marginTop: 13 }}>{txt}</div>
+        })()}
         <button className="btn" style={{ marginTop: 18 }} onClick={handleSave} disabled={saving}>
           {saving ? 'Guardando…' : 'Guardar'}
         </button>

@@ -66,9 +66,25 @@ const DEFAULT_BUSINESS: BusinessProfile = {
 const DEFAULT_AGENT: AgentConfig = {
   agent_name: 'Bolty',
   tone: 'Cercano',
-  business_type: 'Productos y turnos',
+  business_type: 'Productos y servicios',
   instructions: '',
   features_enabled: {},
+}
+
+/**
+ * A partir del tipo de negocio define qué secciones ve el cliente.
+ * Tolera valores viejos ("Productos y turnos", "Solo servicios con turno")
+ * y los nuevos ("Productos y servicios", "Solo servicios").
+ */
+export function getBusinessFlags(businessType: string | undefined) {
+  const t = (businessType || '').toLowerCase()
+  const onlyProducts = t.includes('solo producto')
+  const onlyServices = t.includes('solo servicio')
+  return {
+    products: !onlyServices,       // ve Productos salvo que sea "solo servicios"
+    services: !onlyProducts,       // ve Servicios salvo que sea "solo productos"
+    agenda: !onlyProducts,         // la Agenda aplica a negocios con servicios/turnos
+  }
 }
 
 interface BusinessContextType {
