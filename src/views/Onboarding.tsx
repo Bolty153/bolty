@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { DAYS, DAY_LABELS, useBusinessContext } from '../context/BusinessContext'
 import type { Day, DayHours } from '../context/BusinessContext'
 import { useAuth } from '../context/AuthContext'
+import { PHONE_PREFIX, cleanPhone } from '../lib/phone'
 
 const TONES = ['Formal', 'Cercano', 'Divertido', 'Con modismos argentinos']
 
@@ -25,7 +26,7 @@ export default function Onboarding() {
   const [industry, setIndustry] = useState('')
   const [description, setDescription] = useState('')
   const [address, setAddress] = useState('')
-  const [phone, setPhone] = useState('')
+  const [phone, setPhone] = useState(PHONE_PREFIX)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -73,7 +74,7 @@ export default function Onboarding() {
       let logoUrl: string | null = null
       if (logoFile) logoUrl = await uploadLogo(logoFile)
       await completeOnboarding(
-        { business_name: businessName, industry, description, address, phone, logo_url: logoUrl, business_hours: hours },
+        { business_name: businessName, industry, description, address, phone: cleanPhone(phone), logo_url: logoUrl, business_hours: hours },
         { agent_name: agentName, tone, instructions },
       )
       // Si llega acá, se guardó OK: la app pasa sola al dashboard.

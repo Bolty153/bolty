@@ -276,3 +276,84 @@ create policy "servicios_delete_own" on storage.objects
   for delete using (
     bucket_id = 'servicios' and auth.uid()::text = (storage.foldername(name))[1]
   );
+
+-- =====================================================================
+-- 8) Agenda / turnos
+-- =====================================================================
+create table if not exists public.appointments (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null references auth.users(id) on delete cascade,
+  customer_name text not null,
+  service_name  text,
+  appt_date     date not null,
+  appt_time     text not null,         -- 'HH:MM'
+  duration_min  integer,
+  price         numeric(12,2),
+  phone         text,
+  notes         text,
+  status        text not null default 'confirmado',
+  source        text not null default 'manual',   -- manual | whatsapp | instagram | web
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+
+-- price por si la tabla ya existía de antes (seguro)
+alter table public.appointments add column if not exists price numeric(12,2);
+
+create index if not exists appointments_user_date_idx on public.appointments(user_id, appt_date);
+
+alter table public.appointments enable row level security;
+
+drop policy if exists "appointments_select_own" on public.appointments;
+create policy "appointments_select_own" on public.appointments
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "appointments_insert_own" on public.appointments;
+create policy "appointments_insert_own" on public.appointments
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "appointments_update_own" on public.appointments;
+create policy "appointments_update_own" on public.appointments
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "appointments_delete_own" on public.appointments;
+create policy "appointments_delete_own" on public.appointments
+  for delete using (auth.uid() = user_id);
+
+grant select, insert, update, delete on public.appointments to anon, authenticated;
+
+-- =====================================================================
+-- 9) Clientes (memoria de clientes del negocio)
+-- =====================================================================
+create table if not exists public.customers (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  name       text not null,
+  phone      text,
+  doc_id     text,          -- DNI / CUIT
+  notes      text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists customers_user_id_idx on public.customers(user_id);
+
+alter table public.customers enable row level security;
+
+drop policy if exists "customers_select_own" on public.customers;
+create policy "customers_select_own" on public.customers
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "customers_insert_own" on public.customers;
+create policy "customers_insert_own" on public.customers
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "customers_update_own" on public.customers;
+create policy "customers_update_own" on public.customers
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "customers_delete_own" on public.customers;
+create policy "customers_delete_own" on public.customers
+  for delete using (auth.uid() = user_id);
+
+grant select, insert, update, delete on public.customers to anon, authenticated;

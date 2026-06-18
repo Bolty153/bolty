@@ -1246,6 +1246,189 @@ h1,h2,h3,h4,h5,.disp {
 .svc-dur-field span { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
 .svc-dur-total { font-size: 13px; font-weight: 600; color: var(--volt-ink); margin-left: 4px; }
 
+/* ===== Agenda / turnos ===== */
+.cal-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.cal-arrow {
+  width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surf); color: var(--ink-2); font-size: 20px; line-height: 1; cursor: pointer;
+  transition: all .12s;
+}
+.cal-arrow:hover { border-color: var(--volt); color: var(--volt); background: var(--volt-wash); }
+.cal-range { font-size: 14px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; color: var(--ink); min-width: 130px; text-align: center; }
+.cal-today {
+  margin-left: auto; padding: 8px 16px; border-radius: 10px; border: 1px solid var(--line-2);
+  background: var(--surf); font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink-soft);
+  font-family: 'Space Grotesk', sans-serif; transition: all .12s;
+}
+.cal-today:hover { border-color: var(--volt); color: var(--volt); }
+
+.cal-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 20px; }
+.cal-day {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 12px 4px; border-radius: 13px; border: 1px solid var(--line);
+  background: var(--surf); cursor: pointer; transition: all .14s;
+}
+.cal-day:hover { border-color: var(--line-2); background: var(--surf-2); }
+.cal-day-wd { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-faint); }
+.cal-day-num { font-size: 19px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; color: var(--ink); }
+.cal-day.today .cal-day-num { color: var(--volt); }
+.cal-day.today { border-color: var(--volt-wash); }
+.cal-day.sel { background: var(--volt); border-color: var(--volt); box-shadow: var(--sh-volt); }
+.cal-day.sel .cal-day-wd, .cal-day.sel .cal-day-num { color: #fff; }
+.cal-day-dot {
+  position: absolute; top: 6px; right: 6px; min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 8px; background: var(--mint); color: #fff; font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.cal-day.sel .cal-day-dot { background: #fff; color: var(--volt-ink); }
+
+.appt-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.appt-item {
+  display: flex; align-items: center; gap: 14px; padding: 13px 14px;
+  border: 1px solid var(--line); border-radius: 13px; background: var(--surf); transition: all .15s;
+}
+.appt-item:hover { box-shadow: var(--sh-s); border-color: var(--line-2); }
+.appt-time {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: 64px; padding: 8px 10px; border-radius: 10px; background: var(--volt-wash);
+  color: var(--volt-ink); font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 16px;
+}
+.appt-time small { font-size: 10.5px; font-weight: 600; color: var(--volt); margin-top: 2px; }
+.appt-info { flex: 1; min-width: 0; }
+.appt-customer { font-size: 14.5px; font-weight: 600; }
+.appt-meta { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; display: flex; gap: 5px; flex-wrap: wrap; }
+.appt-src { text-transform: capitalize; color: var(--mint); font-weight: 600; }
+.appt-notes { font-size: 12px; color: var(--ink-faint); margin-top: 4px; }
+.appt-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.appt-actions button {
+  padding: 7px 12px; border-radius: 9px; border: 1px solid var(--line-2);
+  background: var(--surf); color: var(--ink-2); font-size: 12.5px; font-weight: 600;
+  cursor: pointer; font-family: 'Space Grotesk', sans-serif; transition: all .12s;
+}
+.appt-actions button:hover { background: var(--surf-2); }
+.appt-actions button.danger:hover { background: var(--rose-wash); color: var(--rose); border-color: var(--rose); }
+
+/* Línea de tiempo del día */
+.tl { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.tl-row { display: grid; grid-template-columns: 58px 1fr; gap: 12px; align-items: stretch; }
+.tl-time {
+  display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-start;
+  padding-top: 13px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; color: var(--ink-2);
+}
+.tl-time small { font-size: 10.5px; font-weight: 600; color: var(--ink-faint); margin-top: 2px; }
+.tl-block {
+  display: flex; align-items: center; gap: 12px; justify-content: space-between;
+  border-radius: 13px; padding: 13px 15px; transition: all .15s;
+}
+.tl-block:hover { box-shadow: var(--sh-s); }
+.tl-block-main { min-width: 0; flex: 1; }
+.tl-customer { font-size: 14.5px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; letter-spacing: -.01em; }
+.tl-meta { font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; display: flex; gap: 5px; flex-wrap: wrap; }
+.tl-acts { display: flex; gap: 7px; flex-shrink: 0; }
+.tl-acts button {
+  padding: 6px 11px; border-radius: 8px; border: 1px solid var(--line-2);
+  background: rgba(255,255,255,.7); color: var(--ink-2); font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: 'Space Grotesk', sans-serif; transition: all .12s; white-space: nowrap;
+}
+.tl-acts button:hover { background: #fff; }
+.tl-acts button.danger:hover { background: var(--rose-wash); color: var(--rose); border-color: var(--rose); }
+.tl-free {
+  width: 100%; display: flex; align-items: center; gap: 9px;
+  border: 1.5px dashed var(--line-2); border-radius: 12px; background: transparent;
+  padding: 11px 15px; color: var(--ink-faint); font-size: 12.5px; font-weight: 600;
+  font-family: 'Space Grotesk', sans-serif; cursor: pointer; transition: all .14s; text-align: left;
+}
+.tl-free:hover { border-color: var(--volt); color: var(--volt); background: var(--volt-wash); }
+.tl-free-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); flex-shrink: 0; }
+
+/* Grilla de horas para días sin turnos */
+.daygrid { margin-top: 10px; }
+.daygrid-hint { font-size: 12.5px; color: var(--ink-faint); margin-bottom: 6px; }
+.daygrid-row {
+  display: flex; align-items: flex-start; gap: 12px; width: 100%;
+  background: none; border: none; padding: 0; cursor: pointer; text-align: left;
+}
+.daygrid-time {
+  width: 50px; flex-shrink: 0; font-size: 12px; font-weight: 600; color: var(--ink-faint);
+  font-family: 'Space Grotesk', sans-serif; transform: translateY(-7px);
+}
+.daygrid-line { flex: 1; height: 54px; border-top: 1px solid var(--line); transition: background .12s; }
+.daygrid-row:last-child .daygrid-line { border-bottom: 1px solid var(--line); }
+.daygrid-row:hover .daygrid-line { background: var(--volt-wash); }
+.daygrid-row:hover .daygrid-time { color: var(--volt); }
+
+/* Calendario de día (grilla con turnos a escala) */
+.daycal-hint { font-size: 12.5px; color: var(--ink-faint); margin: 6px 0 4px; }
+.daycal { position: relative; margin-top: 14px; padding-left: 52px; cursor: copy; }
+.daycal-line { position: absolute; left: 52px; right: 0; border-top: 1px solid var(--line); pointer-events: none; }
+.daycal-time {
+  position: absolute; left: -52px; top: 0; transform: translateY(-50%); width: 46px; text-align: right;
+  font-size: 11.5px; font-weight: 600; color: var(--ink-faint); font-family: 'Space Grotesk', sans-serif;
+}
+.daycal-appt {
+  position: absolute; left: 52px; right: 6px; border-radius: 10px;
+  padding: 6px 30px 6px 11px; overflow: hidden; cursor: pointer; transition: box-shadow .12s;
+}
+.daycal-appt:hover { box-shadow: var(--sh-s); }
+.daycal-appt-top { display: flex; align-items: baseline; gap: 8px; }
+.daycal-appt-name { font-size: 13.5px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.daycal-appt-time { font-size: 11px; font-weight: 600; color: var(--ink-soft); white-space: nowrap; flex-shrink: 0; }
+.daycal-appt-meta { font-size: 12px; color: var(--ink-soft); margin-top: 3px; display: flex; gap: 4px; flex-wrap: wrap; }
+.daycal-appt-notes { font-style: italic; }
+.daycal-appt.compact { padding-top: 2px; padding-bottom: 2px; display: flex; align-items: center; }
+.daycal-appt.compact .daycal-appt-name { font-size: 12px; }
+.daycal-appt-del {
+  position: absolute; top: 5px; right: 6px; width: 22px; height: 22px; border-radius: 6px;
+  border: none; background: rgba(255,255,255,.7); color: #ff6b8a;
+  font-size: 16px; line-height: 1; cursor: pointer; transition: all .12s;
+}
+.daycal-appt-del:hover { background: var(--rose-wash); color: var(--rose); }
+
+/* Modal de confirmación */
+.confirm-box { max-width: 420px; text-align: center; }
+.confirm-ic {
+  width: 56px; height: 56px; border-radius: 16px; margin: 0 auto 16px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--rose-wash); color: var(--rose);
+}
+.confirm-box h2 { margin-bottom: 10px; }
+.confirm-box p { font-size: 13.5px; color: var(--ink-soft); line-height: 1.6; margin-bottom: 6px; }
+.confirm-box .modal-actions { justify-content: center; margin-top: 22px; }
+.btn-danger { background: var(--rose); box-shadow: 0 8px 22px rgba(255,61,113,.28); }
+.btn-danger:hover { background: #e62e60; }
+
+@media (max-width: 560px) {
+  .tl-block { flex-wrap: wrap; }
+  .tl-acts { width: 100%; }
+  .tl-acts button { flex: 1; }
+}
+
+@media (max-width: 560px) {
+  .cal-day-num { font-size: 16px; }
+  .cal-day { padding: 9px 2px; }
+  .appt-item { flex-wrap: wrap; }
+  .appt-actions { width: 100%; }
+  .appt-actions button { flex: 1; }
+}
+
+/* ===== Combobox (selector con sugerencias) ===== */
+.cbx { position: relative; }
+.cbx > input { width: 100%; }
+.cbx-menu {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 60;
+  background: var(--surf); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: var(--sh-m); overflow: hidden; max-height: 240px; overflow-y: auto; padding: 5px;
+}
+.cbx-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 9px 10px; border: none; background: none; border-radius: 9px; cursor: pointer;
+  font-family: inherit; transition: background .1s;
+}
+.cbx-item:hover { background: var(--surf-2); }
+.cbx-bar { width: 4px; align-self: stretch; min-height: 22px; border-radius: 3px; flex-shrink: 0; }
+.cbx-label { font-size: 13.5px; font-weight: 600; color: var(--ink); flex: 1; }
+.cbx-sub { font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
+
 @media (max-width: 560px) {
   .prod-grid { grid-template-columns: 1fr 1fr; }
   /* En móvil cada fila del remito se apila para no perder ningún campo */

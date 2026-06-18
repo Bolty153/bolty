@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { DAYS, DAY_LABELS, useBusinessContext } from '../context/BusinessContext'
 import type { Day, DayHours } from '../context/BusinessContext'
 import type { ViewId } from '../App'
+import { initPhone, cleanPhone } from '../lib/phone'
 
 interface Props {
   onNavigate: (view: ViewId) => void
@@ -20,7 +21,7 @@ export default function MiNegocio({ onNavigate }: Props) {
 
   useEffect(() => {
     if (!loading && !initialized) {
-      setLocal(business)
+      setLocal({ ...business, phone: initPhone(business.phone) })
       setInitialized(true)
     }
   }, [loading, business, initialized])
@@ -69,7 +70,7 @@ export default function MiNegocio({ onNavigate }: Props) {
           setLogoFile(null)
         }
       }
-      await saveBusiness({ ...local, logo_url: logoUrl })
+      await saveBusiness({ ...local, logo_url: logoUrl, phone: cleanPhone(local.phone) })
       setSaved(true)
       // Mostramos el "✓ Guardado" un instante y volvemos al inicio.
       setTimeout(() => onNavigate('inicio'), 900)
