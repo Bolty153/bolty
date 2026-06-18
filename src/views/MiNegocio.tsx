@@ -1,12 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
 import { DAYS, DAY_LABELS, useBusinessContext } from '../context/BusinessContext'
 import type { Day, DayHours } from '../context/BusinessContext'
+import type { ViewId } from '../App'
 
-export default function MiNegocio() {
+interface Props {
+  onNavigate: (view: ViewId) => void
+}
+
+export default function MiNegocio({ onNavigate }: Props) {
   const { business, saving, saveBusiness, uploadLogo, loading } = useBusinessContext()
   const [local, setLocal] = useState(business)
   const [initialized, setInitialized] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [copiedDay, setCopiedDay] = useState<Day | null>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
@@ -52,18 +58,24 @@ export default function MiNegocio() {
   }
 
   async function handleSave() {
-    let logoUrl = local.logo_url
-    if (logoFile) {
-      const url = await uploadLogo(logoFile)
-      if (url) {
-        logoUrl = url
-        setLocal(prev => ({ ...prev, logo_url: url }))
-        setLogoFile(null)
+    setError(null)
+    try {
+      let logoUrl = local.logo_url
+      if (logoFile) {
+        const url = await uploadLogo(logoFile)
+        if (url) {
+          logoUrl = url
+          setLocal(prev => ({ ...prev, logo_url: url }))
+          setLogoFile(null)
+        }
       }
+      await saveBusiness({ ...local, logo_url: logoUrl })
+      setSaved(true)
+      // Mostramos el "✓ Guardado" un instante y volvemos al inicio.
+      setTimeout(() => onNavigate('inicio'), 900)
+    } catch (e) {
+      setError('No se pudieron guardar los cambios. Revisá tu conexión e intentá de nuevo. (' + (e as Error).message + ')')
     }
-    await saveBusiness({ ...local, logo_url: logoUrl })
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
   }
 
   if (loading) {
@@ -218,6 +230,7 @@ export default function MiNegocio() {
           <span style={{ color: 'var(--mint)', fontSize: 13, fontWeight: 600 }}>✓ Guardado</span>
         )}
       </div>
+      {error && <div className="onb-error" style={{ marginTop: 14 }}>{error}</div>}
     </>
   )
 }

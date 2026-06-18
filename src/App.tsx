@@ -27,7 +27,7 @@ function renderView(view: ViewId, onNavigate: (v: ViewId) => void) {
     case 'reportes':  return <Reportes />
     case 'agenda':    return <Agenda />
     case 'canales':   return <Canales />
-    case 'negocio':   return <MiNegocio />
+    case 'negocio':   return <MiNegocio onNavigate={onNavigate} />
     case 'productos': return <Productos />
     case 'servicios': return <Servicios />
   }
