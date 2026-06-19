@@ -58,23 +58,24 @@ export default function Auth({ onBack }: Props) {
 
   return (
     <div className="auth-mesh">
-      <div className="auth-col">
 
-        {onBack && (
-          <button type="button" className="auth-back" onClick={onBack}>
-            <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="15" height="15">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-            Volver
-          </button>
-        )}
+      {onBack && (
+        <button type="button" className="auth-back" onClick={onBack}>
+          <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="16" height="16">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          Volver
+        </button>
+      )}
+
+      <div className="auth-col">
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '24px' }}>
           <div className="brand-logo" style={{
-            width: '68px', height: '68px', borderRadius: '20px',
-            boxShadow: '0 16px 30px rgba(91,33,182,.55)',
+            width: '88px', height: '88px', borderRadius: '24px',
+            boxShadow: '0 18px 34px rgba(91,33,182,.55)',
           }}>
-            <svg viewBox="5 3 28 32" fill="none" style={{ width: '54px', height: '54px' }}>
+            <svg viewBox="5 3 28 32" fill="none" style={{ width: '70px', height: '70px' }}>
               <text x="7" y="32" fontFamily="'Space Grotesk',sans-serif" fontWeight="700" fontSize="38" fill="#fff">B</text>
               <path d="M26 6 L17 21 H23 L20.5 33 L31 17 H25 L27.5 6 Z" fill="#00c896" />
             </svg>

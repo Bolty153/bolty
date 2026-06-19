@@ -483,12 +483,14 @@ h1,h2,h3,h4,h5,.disp {
   border: 1px solid rgba(255,255,255,.7);
 }
 .auth-back {
+  position: absolute; top: 22px; left: 22px; z-index: 2;
   display: inline-flex; align-items: center; gap: 6px;
-  background: none; border: none; cursor: pointer; padding: 0;
-  color: rgba(255,255,255,.7); font-size: 13px; font-weight: 600;
-  font-family: inherit; margin-bottom: 18px; transition: color .15s;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+  border-radius: 10px; cursor: pointer; padding: 8px 13px;
+  color: rgba(255,255,255,.85); font-size: 13.5px; font-weight: 600;
+  font-family: inherit; transition: all .15s; backdrop-filter: blur(4px);
 }
-.auth-back:hover { color: #fff; }
+.auth-back:hover { color: #fff; background: rgba(255,255,255,.16); }
 
 /* ===== Landing ===== */
 .landing {
