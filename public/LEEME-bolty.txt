@@ -1,0 +1,16 @@
+Guardá acá la imagen de la mascota con el nombre EXACTO:
+
+    bolty-mascota.png
+
+Es decir, el archivo final tiene que quedar como:  public/bolty-mascota.png
+
+IMPORTANTE: usá la versión con FONDO TRANSPARENTE (PNG sin fondo), así Bolty
+flota sin recuadro y el glow neón sigue su contorno.
+
+Para sacarle el fondo negro, lo más fácil:
+  - Entrá a https://www.remove.bg  (o https://www.photoroom.com)
+  - Subí la imagen de Bolty, te la devuelve sin fondo.
+  - Descargala como PNG y guardala acá con el nombre bolty-mascota.png
+
+Si todavía no está el archivo, se muestra un icono provisorio (no se rompe nada).
+(Podés borrar este archivo cuando agregues la imagen.)

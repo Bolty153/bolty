@@ -16,6 +16,7 @@ import Onboarding from './views/Onboarding'
 import Auth from './views/Auth'
 import Landing from './views/Landing'
 import Admin from './views/admin/Admin'
+import BoltyMascot from './components/BoltyMascot'
 
 export type ViewId = 'inicio' | 'agente' | 'funciones' | 'reportes' | 'agenda' | 'canales' | 'negocio' | 'productos' | 'servicios'
 
@@ -144,12 +145,13 @@ function AppContent() {
   }
 
   if (!session) {
-    if (showLanding) return <Landing onEnter={() => setShowLanding(false)} />
+    // En la landing mostramos a Bolty sólo en la esquina (sin bienvenida central).
+    if (showLanding) return <><Landing onEnter={() => setShowLanding(false)} /><BoltyMascot cornerOnly /></>
     return <Auth onBack={() => setShowLanding(true)} />
   }
   if (!profile || !profile.is_active) return <AccessDenied />
-  if (profile.is_admin) return <Admin />
-  return <Dashboard />
+  if (profile.is_admin) return <><Admin /><BoltyMascot /></>
+  return <><Dashboard /><BoltyMascot /></>
 }
 
 export default function App() {
