@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import type { Client } from './types'
+import type { Client, Plan } from './types'
 import { fmtDate, fmtMoney } from './utils'
+import { useAdminPlanRequests, planKeyFromName } from '../../hooks/usePlanRequests'
+import type { PlanRequest } from '../../hooks/usePlanRequests'
+import { PLAN_NAMES } from '../../components/PlansModal'
 
 interface Props {
   onNavigate: (view: string) => void
@@ -10,6 +13,29 @@ interface Props {
 export default function AdminInicio({ onNavigate }: Props) {
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
+  const { requests, setStatus, reload: reloadReqs } = useAdminPlanRequests()
+  const [plans, setPlans] = useState<Plan[]>([])
+  const pendingReqs = requests.filter(r => r.status === 'pendiente')
+
+  useEffect(() => {
+    supabase.from('plans').select('*').then(({ data }) => setPlans(data || []))
+  }, [])
+
+  // Aprobar: cambia el plan REAL del cliente (clients.plan_id) y marca el pedido hecho
+  async function aprobar(r: PlanRequest) {
+    const planRow = plans.find(p => planKeyFromName(p.name) === r.requested_plan)
+    if (planRow) {
+      const { error } = await supabase
+        .from('clients')
+        .update({ plan_id: planRow.id, updated_at: new Date().toISOString() })
+        .eq('id', r.user_id)
+      if (error) { alert('No se pudo cambiar el plan del cliente: ' + error.message); return }
+    } else {
+      if (!confirm(`No encontré un plan llamado "${PLAN_NAMES[r.requested_plan] || r.requested_plan}" en tu lista de planes. ¿Marcar el pedido como hecho igual (sin cambiar el plan)?`)) return
+    }
+    await setStatus(r.id, 'hecho')
+    reloadReqs()
+  }
 
   useEffect(() => {
     supabase
@@ -115,6 +141,28 @@ export default function AdminInicio({ onNavigate }: Props) {
           <div className="kpi-lbl">Nuevos este mes</div>
         </div>
       </div>
+
+      {pendingReqs.length > 0 && (
+        <div className="adm-sect" style={{ marginBottom: 18, borderColor: 'var(--volt)' }}>
+          <div className="adm-sect-h">
+            🔔 Pedidos de cambio de plan ({pendingReqs.length})
+          </div>
+          {pendingReqs.map(r => (
+            <div key={r.id} className="req-row">
+              <div className="req-info">
+                <b>{r.business_name || 'Cliente'}</b> quiere pasar
+                {r.current_plan ? <> de <span className="req-plan">{PLAN_NAMES[r.current_plan] || r.current_plan}</span></> : null}
+                {' '}al plan <span className="req-plan hl">{PLAN_NAMES[r.requested_plan] || r.requested_plan}</span>
+                <span className="req-date"> · {fmtDate(r.created_at)}</span>
+              </div>
+              <div className="req-actions">
+                <button className="abtn primary" onClick={() => aprobar(r)}>Aprobar y cambiar plan</button>
+                <button className="abtn" onClick={() => setStatus(r.id, 'rechazado')}>Rechazar</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="grid-2">
         <div className="card">

@@ -1,4 +1,8 @@
+import { useState } from 'react'
 import type { ViewId } from '../../App'
+import { useBusinessContext } from '../../context/BusinessContext'
+import { usePlanRequests, useCurrentPlan } from '../../hooks/usePlanRequests'
+import PlansModal from '../PlansModal'
 
 interface Props {
   activeView: ViewId
@@ -136,7 +140,13 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
   // Canales se muestra siempre; Agenda sólo si el negocio trabaja con turnos.
   const servicesNav: NavItemDef[] = showAgenda ? [agendaNav, canalesNav] : [canalesNav]
 
+  const { business } = useBusinessContext()
+  const { requestChange } = usePlanRequests()
+  const currentPlan = useCurrentPlan() || ''
+  const [plansOpen, setPlansOpen] = useState(false)
+
   return (
+    <>
     <aside className="side">
       <div className="nav-label">Tu negocio</div>
       {fullMainNav.map(item => (
@@ -167,9 +177,18 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
         <div className="upsell">
           <h5>⚡ Subí a Pro+</h5>
           <p>Sumá sucursales ilimitadas y conexión con tu sistema de stock.</p>
-          <button>Ver planes</button>
+          <button onClick={() => setPlansOpen(true)}>Ver planes</button>
         </div>
       </div>
     </aside>
+
+    {plansOpen && (
+      <PlansModal
+        currentPlan={currentPlan}
+        onClose={() => setPlansOpen(false)}
+        onRequest={plan => requestChange(plan, business.business_name || '', currentPlan)}
+      />
+    )}
+    </>
   )
 }

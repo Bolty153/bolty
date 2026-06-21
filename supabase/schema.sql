@@ -26,6 +26,7 @@ create table if not exists public.business_profiles (
 alter table public.business_profiles add column if not exists onboarding_complete boolean not null default false;
 alter table public.business_profiles add column if not exists business_hours jsonb default '{}'::jsonb;
 alter table public.business_profiles add column if not exists logo_url text;
+alter table public.business_profiles add column if not exists plan text not null default 'basico';
 
 -- IMPORTANTE: el upsert del frontend usa onConflict: 'user_id'.
 -- Sin esta restricción única, el guardado falla con
@@ -450,3 +451,40 @@ create policy "bank_accounts_delete_own" on public.bank_accounts
   for delete using (auth.uid() = user_id);
 
 grant select, insert, update, delete on public.bank_accounts to anon, authenticated;
+
+-- =====================================================================
+-- 12) Pedidos de cambio de plan (el cliente pide, el admin los ve)
+-- =====================================================================
+create table if not exists public.plan_requests (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references auth.users(id) on delete cascade,
+  business_name  text,
+  current_plan   text,
+  requested_plan text not null,
+  status         text not null default 'pendiente',   -- pendiente | hecho | rechazado
+  created_at     timestamptz not null default now()
+);
+
+create index if not exists plan_requests_status_idx on public.plan_requests(status, created_at);
+
+alter table public.plan_requests enable row level security;
+
+-- El cliente crea y ve sus propios pedidos; el admin ve y actualiza todos.
+drop policy if exists "plan_requests_insert_own" on public.plan_requests;
+create policy "plan_requests_insert_own" on public.plan_requests
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "plan_requests_select_own_or_admin" on public.plan_requests;
+create policy "plan_requests_select_own_or_admin" on public.plan_requests
+  for select using (
+    auth.uid() = user_id
+    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
+
+drop policy if exists "plan_requests_update_admin" on public.plan_requests;
+create policy "plan_requests_update_admin" on public.plan_requests
+  for update using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
+
+grant select, insert, update, delete on public.plan_requests to anon, authenticated;

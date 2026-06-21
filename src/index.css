@@ -1502,6 +1502,47 @@ h1,h2,h3,h4,h5,.disp {
 .fin-acc-bar i { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--volt-2), var(--volt)); }
 .fin-acc-amt { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; min-width: 90px; text-align: right; }
 
+/* ===== Planes ===== */
+.plans-box { max-width: 880px; }
+.plans-sub { font-size: 13.5px; color: var(--ink-soft); margin-bottom: 20px; }
+.plans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.plan-card {
+  position: relative; border: 1px solid var(--line); border-radius: 16px; padding: 22px 18px;
+  display: flex; flex-direction: column; background: var(--surf); transition: all .15s;
+}
+.plan-card.hl { border-color: var(--volt); box-shadow: 0 10px 30px rgba(96,41,255,.12); }
+.plan-card.current { background: var(--surf-2); }
+.plan-tag {
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+  background: var(--volt); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 12px; border-radius: 20px;
+  font-family: 'Space Grotesk', sans-serif;
+}
+.plan-tag.current { background: var(--mint); }
+.plan-name { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.plan-price { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; color: var(--ink); margin-bottom: 16px; }
+.plan-price span { font-size: 13px; font-weight: 500; color: var(--ink-faint); }
+.plan-feats { list-style: none; display: flex; flex-direction: column; gap: 9px; margin-bottom: 18px; flex: 1; }
+.plan-feats li { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--ink-2); line-height: 1.4; }
+.plan-feats li svg { color: var(--mint); flex-shrink: 0; margin-top: 2px; }
+.plan-btn { width: 100%; }
+.plans-done { text-align: center; padding: 14px 0; }
+.plans-done .confirm-ic { margin: 0 auto 16px; width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+.plans-done h2 { margin-bottom: 10px; }
+.plans-done p { font-size: 14px; color: var(--ink-soft); line-height: 1.6; margin-bottom: 22px; }
+
+/* Pedidos de cambio de plan (admin) */
+.req-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.req-row:last-child { border-bottom: none; }
+.req-info { font-size: 13.5px; color: var(--ink-2); flex: 1; min-width: 220px; }
+.req-plan { font-weight: 700; color: var(--ink); }
+.req-plan.hl { color: var(--volt); }
+.req-date { color: var(--ink-faint); font-size: 12px; }
+.req-actions { display: flex; gap: 8px; }
+
+@media (max-width: 700px) {
+  .plans-grid { grid-template-columns: 1fr; }
+}
+
 /* Distintivo de turno cobrado */
 .appt-paid {
   font-size: 10.5px; font-weight: 700; color: #0b7a4f; background: var(--mint-wash);

@@ -40,6 +40,7 @@ export interface BusinessProfile {
   logo_url: string | null
   business_hours: Record<Day, DayHours>
   onboarding_complete: boolean
+  plan: string
 }
 
 export interface AgentConfig {
@@ -61,6 +62,7 @@ const DEFAULT_BUSINESS: BusinessProfile = {
   logo_url: null,
   business_hours: DEFAULT_HOURS,
   onboarding_complete: false,
+  plan: 'basico',
 }
 
 const DEFAULT_AGENT: AgentConfig = {
