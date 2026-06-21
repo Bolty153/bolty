@@ -4,8 +4,11 @@ import type { Appointment, AppointmentInput } from '../hooks/useAppointments'
 import { useServices, fmtDuration } from '../hooks/useServices'
 import { useBusinessContext } from '../context/BusinessContext'
 import { useCustomers } from '../hooks/useCustomers'
+import { useFinance } from '../hooks/useFinance'
+import { useBankAccounts } from '../hooks/useBankAccounts'
 import Combobox from '../components/Combobox'
 import TimePicker from '../components/TimePicker'
+import PaymentForm from '../components/finance/PaymentForm'
 import { serviceColor } from '../lib/colors'
 import { initPhone, cleanPhone } from '../lib/phone'
 
@@ -44,6 +47,8 @@ export default function Agenda() {
   const { services } = useServices()
   const { customers, upsertFromAppointment } = useCustomers()
   const { business } = useBusinessContext()
+  const { addPayment } = useFinance()
+  const { accounts, addAccount } = useBankAccounts()
 
   const svcOpts: SvcOpt[] = useMemo(
     () => services.map(s => ({ name: s.name, duration: s.duration_min, price: s.price, on_request: s.price_on_request })),
@@ -58,6 +63,7 @@ export default function Agenda() {
   const [presetTime, setPresetTime] = useState('')
   const [toCancel, setToCancel] = useState<Appointment | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [payFor, setPayFor] = useState<Appointment | null>(null)
 
   const weekDays = useMemo(() => {
     const start = startOfWeek(ref)
@@ -216,6 +222,7 @@ export default function Agenda() {
                     <div className="daycal-appt-main">
                       <div className="daycal-appt-top">
                         <span className="daycal-appt-name">{a.customer_name}</span>
+                        {a.paid && <span className="appt-paid">✓ Cobrado</span>}
                         <span className="daycal-appt-time">{a.appt_time}{a.duration_min ? ` · ${fmtDuration(a.duration_min)}` : ''}</span>
                       </div>
                       {!compact && (
@@ -228,6 +235,15 @@ export default function Agenda() {
                         </div>
                       )}
                     </div>
+                    {a.paid ? (
+                      <span className="daycal-appt-paid" title="Pago registrado">✓</span>
+                    ) : (
+                      <button
+                        className="daycal-appt-pay"
+                        title="Registrar pago"
+                        onClick={e => { e.stopPropagation(); setPayFor(a) }}
+                      >$</button>
+                    )}
                     <button
                       className="daycal-appt-del"
                       title="Cancelar turno"
@@ -254,6 +270,25 @@ export default function Agenda() {
             else await addAppointment(input)
             if (saveCustomer) await upsertFromAppointment(input.customer_name, input.phone ?? null)
             setFormOpen(false)
+          }}
+        />
+      )}
+
+      {payFor && (
+        <PaymentForm
+          services={svcOpts.map(s => ({ name: s.name, price: s.price, on_request: s.on_request }))}
+          accounts={accounts}
+          initial={{
+            customer: payFor.customer_name,
+            service: payFor.service_name ?? '',
+            amount: payFor.price ?? svcOpts.find(s => s.name === payFor.service_name)?.price,
+          }}
+          onSaveAccount={addAccount}
+          onClose={() => setPayFor(null)}
+          onSave={async input => {
+            await addPayment(input)
+            await updateAppointment(payFor.id, { paid: true })
+            setPayFor(null)
           }}
         />
       )}

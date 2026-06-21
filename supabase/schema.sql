@@ -293,9 +293,13 @@ create table if not exists public.appointments (
   notes         text,
   status        text not null default 'confirmado',
   source        text not null default 'manual',   -- manual | whatsapp | instagram | web
+  paid          boolean not null default false,    -- turno ya cobrado
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
+
+-- paid por si la tabla ya existía
+alter table public.appointments add column if not exists paid boolean not null default false;
 
 -- price por si la tabla ya existía de antes (seguro)
 alter table public.appointments add column if not exists price numeric(12,2);
@@ -357,3 +361,92 @@ create policy "customers_delete_own" on public.customers
   for delete using (auth.uid() = user_id);
 
 grant select, insert, update, delete on public.customers to anon, authenticated;
+
+-- =====================================================================
+-- 10) Finanzas (pagos de servicios + ventas de productos + ventas manuales)
+-- =====================================================================
+create table if not exists public.payments (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  kind          text not null default 'manual',   -- servicio | producto | manual
+  customer_name text,                              -- cliente que pagó (opcional)
+  description text,
+  amount      numeric(12,2) not null default 0,   -- total final cobrado
+  method      text not null default 'efectivo',   -- efectivo | transferencia
+  account     text,                               -- cuenta destino si es transferencia
+  adjustment  numeric(12,2) not null default 0,   -- + recargo / - descuento (en $)
+  items       jsonb,                              -- detalle de productos vendidos (opcional)
+  pay_date    date not null default current_date,
+  created_at  timestamptz not null default now()
+);
+
+-- Por si ya existía una tabla payments sin estas columnas (agrega lo que falte)
+alter table public.payments add column if not exists user_id     uuid references auth.users(id) on delete cascade;
+alter table public.payments add column if not exists kind          text not null default 'manual';
+alter table public.payments add column if not exists customer_name text;
+alter table public.payments add column if not exists description text;
+alter table public.payments add column if not exists amount      numeric(12,2) not null default 0;
+alter table public.payments add column if not exists method      text not null default 'efectivo';
+alter table public.payments add column if not exists account     text;
+alter table public.payments add column if not exists adjustment  numeric(12,2) not null default 0;
+alter table public.payments add column if not exists items       jsonb;
+alter table public.payments add column if not exists pay_date    date not null default current_date;
+alter table public.payments add column if not exists created_at  timestamptz not null default now();
+
+create index if not exists payments_user_date_idx on public.payments(user_id, pay_date);
+
+alter table public.payments enable row level security;
+
+drop policy if exists "payments_select_own" on public.payments;
+create policy "payments_select_own" on public.payments
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "payments_insert_own" on public.payments;
+create policy "payments_insert_own" on public.payments
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "payments_update_own" on public.payments;
+create policy "payments_update_own" on public.payments
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "payments_delete_own" on public.payments;
+create policy "payments_delete_own" on public.payments
+  for delete using (auth.uid() = user_id);
+
+grant select, insert, update, delete on public.payments to anon, authenticated;
+
+-- =====================================================================
+-- 11) Cuentas bancarias guardadas (para transferencias)
+-- =====================================================================
+create table if not exists public.bank_accounts (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  name       text not null,     -- nombre/alias de la cuenta (lo que se elige)
+  bank       text,
+  number     text,
+  alias_cbu  text,
+  holder     text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists bank_accounts_user_idx on public.bank_accounts(user_id);
+
+alter table public.bank_accounts enable row level security;
+
+drop policy if exists "bank_accounts_select_own" on public.bank_accounts;
+create policy "bank_accounts_select_own" on public.bank_accounts
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "bank_accounts_insert_own" on public.bank_accounts;
+create policy "bank_accounts_insert_own" on public.bank_accounts
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "bank_accounts_update_own" on public.bank_accounts;
+create policy "bank_accounts_update_own" on public.bank_accounts
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "bank_accounts_delete_own" on public.bank_accounts;
+create policy "bank_accounts_delete_own" on public.bank_accounts
+  for delete using (auth.uid() = user_id);
+
+grant select, insert, update, delete on public.bank_accounts to anon, authenticated;

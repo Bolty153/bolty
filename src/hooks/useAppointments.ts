@@ -15,6 +15,7 @@ export interface Appointment {
   notes: string | null
   status: string
   source: string
+  paid: boolean
   created_at?: string
 }
 
@@ -29,6 +30,7 @@ export interface AppointmentInput {
   notes?: string | null
   status?: string
   source?: string
+  paid?: boolean
 }
 
 /**

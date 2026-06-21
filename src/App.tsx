@@ -12,13 +12,14 @@ import Canales from './views/Canales'
 import MiNegocio from './views/MiNegocio'
 import Productos from './views/Productos'
 import Servicios from './views/Servicios'
+import Finanzas from './views/Finanzas'
 import Onboarding from './views/Onboarding'
 import Auth from './views/Auth'
 import Landing from './views/Landing'
 import Admin from './views/admin/Admin'
 import BoltyMascot from './components/BoltyMascot'
 
-export type ViewId = 'inicio' | 'agente' | 'funciones' | 'reportes' | 'agenda' | 'canales' | 'negocio' | 'productos' | 'servicios'
+export type ViewId = 'inicio' | 'agente' | 'funciones' | 'reportes' | 'agenda' | 'canales' | 'negocio' | 'productos' | 'servicios' | 'finanzas'
 
 function renderView(view: ViewId, onNavigate: (v: ViewId) => void) {
   switch (view) {
@@ -31,6 +32,7 @@ function renderView(view: ViewId, onNavigate: (v: ViewId) => void) {
     case 'negocio':   return <MiNegocio onNavigate={onNavigate} />
     case 'productos': return <Productos />
     case 'servicios': return <Servicios />
+    case 'finanzas':  return <Finanzas />
   }
 }
 
