@@ -5,16 +5,20 @@ import AdminClientes from './AdminClientes'
 import AdminDinero from './AdminDinero'
 import AdminMetricas from './AdminMetricas'
 import AdminControl from './AdminControl'
+import AdminSoporte from './AdminSoporte'
 import type { Client } from './types'
 import { statusLabel, fmtDate, fmtMoney } from './utils'
+import { useAdminTickets } from '../../hooks/useSupport'
 
-type AdminView = 'inicio' | 'clientes' | 'dinero' | 'metricas' | 'control'
+type AdminView = 'inicio' | 'clientes' | 'dinero' | 'metricas' | 'control' | 'soporte'
 
 export default function Admin() {
   const { signOut, session } = useAuth()
   const [view, setView] = useState<AdminView>('inicio')
   const [impersonating, setImpersonating] = useState<Client | null>(null)
   const email = session?.user?.email || ''
+  const { tickets } = useAdminTickets()
+  const pendingSupport = tickets.filter(t => t.status === 'pendiente').length
 
   if (impersonating) {
     return (
@@ -87,11 +91,13 @@ export default function Admin() {
             { id: 'clientes', label: 'Clientes',  icon: <IcUsers /> },
             { id: 'dinero',   label: 'Dinero',    icon: <IcMoney /> },
             { id: 'metricas', label: 'Métricas',  icon: <IcChart /> },
+            { id: 'soporte',  label: 'Soporte',   icon: <IcLife /> },
             { id: 'control',  label: 'Control',   icon: <IcSettings /> },
           ] as { id: AdminView; label: string; icon: React.ReactNode }[]).map(({ id, label, icon }) => (
             <button key={id} onClick={() => setView(id)}
               className={`adm-nav-item${view === id ? ' active' : ''}`}>
               {icon}{label}
+              {id === 'soporte' && pendingSupport > 0 && <span className="adm-nav-dot" />}
             </button>
           ))}
         </nav>
@@ -107,6 +113,7 @@ export default function Admin() {
           {view === 'clientes' && <AdminClientes onImpersonate={setImpersonating} />}
           {view === 'dinero'   && <AdminDinero />}
           {view === 'metricas' && <AdminMetricas />}
+          {view === 'soporte'  && <AdminSoporte />}
           {view === 'control'  && <AdminControl />}
         </div>
       </div>
@@ -120,3 +127,4 @@ function IcMoney()    { return <svg fill="none" stroke="currentColor" strokeWidt
 function IcChart()    { return <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="17" height="17"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> }
 function IcSettings() { return <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="17" height="17"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg> }
 function IcLogout()   { return <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="17" height="17"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> }
+function IcLife()     { return <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="17" height="17"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="M4.9 4.9l4.2 4.2M14.9 14.9l4.2 4.2M14.9 9.1l4.2-4.2M14.9 9.1l3.5-3.5M4.9 19.1l4.2-4.2"/></svg> }

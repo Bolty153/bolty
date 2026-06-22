@@ -488,3 +488,59 @@ create policy "plan_requests_update_admin" on public.plan_requests
   );
 
 grant select, insert, update, delete on public.plan_requests to anon, authenticated;
+
+-- =====================================================================
+-- 13) Soporte: fallas, sugerencias y pedidos de servicio a medida
+-- =====================================================================
+create table if not exists public.support_tickets (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references auth.users(id) on delete cascade,
+  business_name  text,
+  phone          text,
+  type           text not null,                       -- falla | sugerencia | medida
+  title          text,
+  description    text not null,
+  screenshot_url text,
+  status         text not null default 'pendiente',   -- pendiente | resuelto
+  created_at     timestamptz not null default now()
+);
+
+alter table public.support_tickets add column if not exists phone text;
+
+create index if not exists support_tickets_idx on public.support_tickets(type, status, created_at);
+
+alter table public.support_tickets enable row level security;
+
+drop policy if exists "support_insert_own" on public.support_tickets;
+create policy "support_insert_own" on public.support_tickets
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "support_select_own_or_admin" on public.support_tickets;
+create policy "support_select_own_or_admin" on public.support_tickets
+  for select using (
+    auth.uid() = user_id
+    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
+
+drop policy if exists "support_update_admin" on public.support_tickets;
+create policy "support_update_admin" on public.support_tickets
+  for update using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
+
+grant select, insert, update, delete on public.support_tickets to anon, authenticated;
+
+-- Bucket de capturas de soporte (path: {uid}/archivo.ext)
+insert into storage.buckets (id, name, public)
+values ('soporte', 'soporte', true)
+on conflict (id) do nothing;
+
+drop policy if exists "soporte_read" on storage.objects;
+create policy "soporte_read" on storage.objects
+  for select using (bucket_id = 'soporte');
+
+drop policy if exists "soporte_write_own" on storage.objects;
+create policy "soporte_write_own" on storage.objects
+  for insert with check (
+    bucket_id = 'soporte' and auth.uid()::text = (storage.foldername(name))[1]
+  );

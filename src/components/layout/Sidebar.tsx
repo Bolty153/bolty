@@ -2,7 +2,10 @@ import { useState } from 'react'
 import type { ViewId } from '../../App'
 import { useBusinessContext } from '../../context/BusinessContext'
 import { usePlanRequests, useCurrentPlan } from '../../hooks/usePlanRequests'
+import { useSupport } from '../../hooks/useSupport'
+import type { TicketType } from '../../hooks/useSupport'
 import PlansModal from '../PlansModal'
+import SupportModal from '../support/SupportModal'
 
 interface Props {
   activeView: ViewId
@@ -142,8 +145,22 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
 
   const { business } = useBusinessContext()
   const { requestChange } = usePlanRequests()
+  const { submit: submitTicket, uploadScreenshot } = useSupport()
   const currentPlan = useCurrentPlan() || ''
   const [plansOpen, setPlansOpen] = useState(false)
+  const [supportType, setSupportType] = useState<TicketType | null>(null)
+
+  const supportItems: { type: TicketType; label: string; icon: React.ReactNode }[] = [
+    { type: 'falla', label: 'Reportar una falla', icon: (
+      <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><path d="M12 9v4M12 17h.01" /></svg>
+    ) },
+    { type: 'sugerencia', label: 'Enviar sugerencia', icon: (
+      <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0012 2z" /></svg>
+    ) },
+    { type: 'medida', label: 'Servicio a medida', icon: (
+      <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4L12 17l-6.3 4.4L8 14 2 9.4h7.6z" /></svg>
+    ) },
+  ]
 
   return (
     <>
@@ -174,7 +191,16 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
       ))}
 
       <div className="side-foot">
-        <div className="upsell">
+        <div className="nav-sep" />
+        <div className="nav-label">Soporte y ayuda</div>
+        {supportItems.map(item => (
+          <button key={item.type} className="nav-item support" onClick={() => setSupportType(item.type)}>
+            {item.icon}
+            {item.label}
+          </button>
+        ))}
+
+        <div className="upsell" style={{ marginTop: 14 }}>
           <h5>⚡ Subí a Pro+</h5>
           <p>Sumá sucursales ilimitadas y conexión con tu sistema de stock.</p>
           <button onClick={() => setPlansOpen(true)}>Ver planes</button>
@@ -187,6 +213,15 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
         currentPlan={currentPlan}
         onClose={() => setPlansOpen(false)}
         onRequest={plan => requestChange(plan, business.business_name || '', currentPlan)}
+      />
+    )}
+
+    {supportType && (
+      <SupportModal
+        type={supportType}
+        uploadScreenshot={uploadScreenshot}
+        onClose={() => setSupportType(null)}
+        onSubmit={input => submitTicket(input, business.business_name || '', business.phone || '')}
       />
     )}
     </>
