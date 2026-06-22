@@ -3,173 +3,167 @@
 **Business Online Live Technology For You**
 *"Tecnología en vivo online, para tu negocio."*
 
-> Documento maestro definitivo. Pegá esto en un chat nuevo de Claude para arrancar a construir desde cero, sin perder nada de lo definido.
+> Documento maestro de referencia. Refleja el estado real del proyecto al día de hoy. Sirve para retomar todo desde cero sin perder nada.
+>
+> Última actualización: 22/06/2026
 
 ---
 
-## 1. Qué es (resumen en una frase)
+## 1. Qué es Bolty
 
-Bolty es una plataforma web (SaaS) donde cualquier comercio o empresa, en pocos minutos, arma su propio "empleado virtual" con IA que responde a sus clientes por WhatsApp, Instagram y chat web — entrenado con los datos exactos del negocio, capaz de consultar el stock en tiempo real, leer fotos de productos y entender audios.
+Bolty es una plataforma web **SaaS** (un solo sistema multi-tenant para todos los clientes) donde cualquier comercio o empresa, en pocos minutos, arma su propio **empleado virtual con IA** que atiende a sus clientes por **WhatsApp, Instagram y chat web**.
 
----
+El agente:
+- Responde con **IA real** (no respuestas fijas/guionadas), entrenado con los datos del negocio.
+- Consulta el **stock en tiempo real**.
+- **Agenda turnos** para negocios de servicios.
+- Responde en **varios idiomas**.
+- (A futuro) entiende audios y lee fotos de productos.
 
-## 2. El problema que resuelve
+**Mercado:** Argentina (pymes, comercios y empresas con sucursales). Cobro en pesos.
 
-- Los negocios pierden ventas porque no pueden responder consultas a toda hora, y contratar personal de atención es caro.
-- La pregunta más repetida es "¿tienen tal cosa en stock?", y sin un sistema, el dueño tiene que revisar a mano y responde tarde o mal.
-- WhatsApp es el canal principal de ventas en Argentina, pero no existe una herramienta de automatización accesible y simple para pymes chicas.
+**El problema que resuelve:** los negocios pierden ventas por no poder responder a toda hora; contratar personal de atención es caro; la consulta más repetida ("¿tenés tal cosa?") se responde tarde o mal. WhatsApp es el canal de ventas principal en Argentina y no hay una herramienta accesible y simple para automatizarlo.
 
----
-
-## 3. Cómo funciona (flujo del usuario final)
-
-1. El negocio se registra en la plataforma.
-2. Elige si vende productos, servicios con turno, o ambos (esto define qué módulos ve).
-3. Carga su información: nombre, rubro, horarios, dirección, preguntas frecuentes.
-4. Carga su inventario (sube un Excel/CSV o lo escribe manualmente).
-5. Conecta su PROPIO número de WhatsApp / Instagram.
-6. El agente IA queda funcionando 24/7, respondiendo solo.
+**Cómo se identifica cada negocio (clave de arquitectura):** cada negocio conecta su **propio número de WhatsApp**. El número es la llave de entrada: el sistema sabe de qué negocio es cada mensaje y usa su inventario, su configuración y su agente. Nunca se mezcla, ni entre dos sucursales del mismo dueño.
 
 ---
 
-## 4. Cómo se identifica cada negocio (pieza clave de la arquitectura)
+## 2. Lo que YA está construido y funciona
 
-**Cada negocio conecta su PROPIO número de WhatsApp.** No hay un número compartido, por eso nunca hay confusión, ni siquiera entre dos sucursales del mismo dueño.
+### 2.1 Público / acceso
+- **Landing de marketing** (pública): presenta el producto, planes, beneficios, llamada a la acción "Ingresar" y "Contactanos". Bolty (mascota) aparece en la esquina con un saludo.
+- **Login + control de acceso manual:** registro/login con email y contraseña (Supabase Auth). El acceso al panel lo **activa manualmente el administrador** (cada cliente nuevo entra recién cuando el admin lo habilita). Pantalla de "acceso no activo" si todavía no fue habilitado. Recuperación de contraseña por email.
 
-Ejemplo: si alguien tiene dos veterinarias:
-- Veterinaria Centro → número +54 9 341 111-1111
-- Veterinaria Norte → número +54 9 341 222-2222
+### 2.2 Panel de administrador (el dueño de Bolty)
+- **Clientes:** alta de clientes, activar/desactivar acceso, suspender, editar (plan, estado, vencimiento, notas), resetear contraseña, y **"ver como cliente"** (modo soporte de solo lectura).
+- **Dinero / Métricas / Control:** secciones del panel para seguimiento del negocio Bolty.
+- **Pedidos de cambio de plan:** en el Panel aparecen los pedidos de los clientes; el admin **aprueba y cambia el plan real** del cliente.
+- **Soporte:** bandeja con pestañas (Fallas / Sugerencias / Servicio a medida), estado pendiente/resuelto, teléfono del cliente para contactarlo, y **puntito de aviso** en el menú cuando hay pendientes.
 
-Cuando un cliente le escribe a la del Centro, el mensaje entra por el número 111. El sistema mira de qué número vino y ya sabe con certeza que es la Veterinaria Centro: busca SU inventario, usa SU configuración, responde con SU agente. El número es la llave de entrada, como el buzón de una casa. No hay forma de que se mezcle.
-
-Cada empresa tiene su propio agente: el motor de IA es el mismo, pero cada negocio tiene su número, su inventario y su configuración, y eso lo hace funcionar como si fuera exclusivo.
-
----
-
-## 5. Arquitectura: UNA sola plataforma para todos (multi-tenant)
-
-Se construye una sola web, no una por cliente. Cada negocio que se registra tiene su propia cuenta y espacio privado adentro (como Instagram: una sola app, perfiles separados). Nadie ve los datos del otro. El motor de IA es uno solo y alimenta a todos los agentes.
-
----
-
-## 6. Funciones del agente (clasificadas)
-
-### 6.1 Núcleo — siempre activas, no se desactivan
-- **(2) Avisa al dueño lo que no sabe responder.** Si no tiene la respuesta, en vez de inventar, le avisa al dueño; el dueño contesta una vez y el agente aprende para la próxima.
-- **(3) Reportes inteligentes semanales.** Cada semana el dueño recibe: productos más preguntados que NO tiene en stock (qué comprar), horarios donde más le escriben (cuándo reforzar), productos más consultados que sí tiene (qué se vende), y cuántas consultas terminaron en venta o turno.
-- **(12) Responder audios.** Escucha y entiende los audios de WhatsApp y responde. (Clave en Argentina.)
-- **(22) Alertas en el momento.** Si pasa algo importante ahora (cliente grande preguntando, reclamo fuerte, pico raro de consultas), le llega un aviso al toque, sin esperar al reporte semanal.
-
-### 6.2 Activables / desactivables desde el dashboard de cada empresa
-- **(1) Vende y agenda.** Cierra la venta o reserva el turno dentro de la conversación.
-- **(4) Recupera clientes que se fueron.** Si alguien preguntó y no compró, a los días el agente le reescribe con una promo.
-- **(5) Detecta idioma y responde igual.** Si escriben en inglés o portugués, responde en ese idioma.
-- **(6) Deriva a humano.** Si el cliente está enojado, pide hablar con una persona, o es una consulta delicada (reclamo, tema médico serio), le pasa la conversación al dueño.
-- **(7) Sugiere productos relacionados (venta cruzada).** "¿Querés sumar pipeta antipulgas? Está en oferta."
-- **(8) Cupones y promos automáticas.** El negocio carga una promo y el agente la ofrece en el momento justo o a clientes que hace rato no compran.
-- **(17) Entrenar al agente hablándole.** El dueño le habla al agente como a un empleado nuevo ("cuando pregunten por X, decí esto; los domingos no abrimos") y el agente aprende, sin formularios.
-- **(18) Personalidad propia del agente.** El negocio elige el tono: formal, canchero, divertido, con modismos argentinos. Customizable por cada empresa.
-- **(19) Resumen de voz diario.** Cada noche el dueño recibe un audio corto: "Hoy respondí 34 consultas, cerré 5 ventas, hay 2 reclamos esperándote." *(A confirmar si es técnicamente posible; queda como objetivo.)*
-- **(23) "¿Qué pregunta la gente?"** Resumen de las dudas más repetidas de la semana, para mejorar el negocio (ej: "muchos preguntan si hacés envíos").
-- **(24) Comparador de días.** "Tu mejor día fue el jueves con 18 consultas. Los martes son flojos." Para saber cuándo reforzar o hacer promos.
-
-### 6.3 Función destacada (activable, pero en lugar visible e importante del dashboard)
-- **(9) Lista de espera inteligente.** Si no hay stock, el agente anota al cliente y le avisa solo cuando llega: "¡Llegó lo que buscabas!" No se pierde la venta.
-
-### 6.4 Módulo aparte — solo para negocios de servicios con turnos
-- **(11) Agenda y turnos completa.** Dashboard separado que aparece SOLO si el negocio eligió que trabaja con turnos (veterinarias, peluquerías, consultorios). Muestra horarios libres, reserva, y manda recordatorio el día anterior para bajar el ausentismo. Si el negocio solo vende productos (ej: repuestos de auto), este módulo no aparece.
-
-### 6.5 Funciones para empresas grandes — van sí o sí (a definir bien cómo se arman)
-- **(14) Varias sucursales en una sola cuenta.** Mismo dashboard; el dueño agrega los locales que tenga, cada uno con su número y su stock, y ve todo junto.
-- **(15) Conexión con sistemas que ya usan.** Sincronizar stock con Tienda Nube, sistemas de facturación o planillas en la nube. Cero carga manual.
-- **(16) Roles de equipo.** El dueño da accesos a empleados con permisos distintos (uno ve reportes, otro responde derivaciones, etc.).
-
-### 6.6 Descartadas por ahora
-- **(10) Cobro por link en el chat.** No hace falta por el momento.
-- **(13) Catálogo automático.** Puede armar quilombos; se deja para más adelante.
-- **(21) Termómetro del negocio.** No incluida por ahora.
+### 2.3 Dashboard del cliente (el negocio)
+- **Onboarding** en pasos: datos del negocio, horarios y agente. Persiste en Supabase; al volver a entrar no se vuelve a pedir.
+- **Inicio:** panel con KPIs (vacíos hasta tener actividad), "Primeros pasos", horarios, aviso de stock bajo.
+- **Mi negocio:** nombre, rubro, descripción, dirección, teléfono, logo (Storage) y **horarios de atención con turno cortado** (dos turnos por día, copiar a todos los días).
+- **Inventario (Productos):** alta/edición/borrado, foto, búsqueda, filtro por categoría, **stock rápido (+/−)**, **código de barras opcional + lector con cámara**, **importar desde Excel/CSV** (con plantilla), **carga desde remito** (pantalla lista para enchufar IA), **carga rápida**, **aviso de stock bajo**, **ajuste masivo**.
+- **Servicios:** para negocios de servicios (sin stock): precio fijo o "a consultar", **duración** (horas + minutos), categoría, foto, importar Excel/CSV.
+- **Tipo de negocio** (en "Mi agente"): Solo productos / Solo servicios / Productos y servicios → define qué secciones se ven (Inventario y/o Servicios y/o Agenda).
+- **Agenda y turnos:** calendario de día real, navegable sin límite; turnos ubicados por hora y a **escala de su duración**; huecos "Libre" a escala; alta/edición/cancelación con modal propio; memoria de clientes (autocompleta teléfono); **registrar pago desde el turno** (queda marcado "Cobrado").
+- **Finanzas (dashboard de ingresos):** registrar **pago de servicio** (con nombre del cliente) y **venta de productos** (desde inventario con descuento de stock, o manual); **forma de pago** efectivo/transferencia; **cuentas bancarias guardadas** (con banco/CBU/titular, se eligen de una lista); **descuento/recargo** en $ o %; KPIs día/semana/mes; gráficos de **forma de pago** e **ingresos por cuenta**; lista de movimientos.
+- **Mascota Bolty animada:** video con fondo transparente; bienvenida en el centro al entrar (una vez por sesión), luego flota en la esquina con glow y reacciona al mouse. También en la landing (solo esquina).
+- **Soporte y ayuda** (grupo aparte del menú): reportar falla (con captura), enviar sugerencia, servicio a medida (pago, "pedir presupuesto").
+- **Ver planes / pedir cambio de plan:** modal con los 3 planes, marca el plan actual real y permite pedir el cambio (queda registrado y le llega al admin).
 
 ---
 
-## 7. Modelo de negocio y planes
+## 3. Decisiones tomadas
 
-| Plan | Precio | Incluye |
-|------|--------|---------|
-| Básico | $15 USD/mes | 1 canal, 200 conversaciones/mes, inventario hasta 500 productos, soporte por email |
-| Pro (más vendido) | $35 USD/mes | WhatsApp + Instagram + Web, 600 conversaciones/mes, inventario ilimitado, lectura de fotos, panel de métricas |
-| Empresa | $90+ USD/mes | Conversaciones ilimitadas, múltiples agentes/sucursales, integración a medida, roles de equipo, soporte prioritario |
-| Setup (opcional) | $50 USD único | Configuración hecha por nosotros para el cliente |
-
-**Cobro:** Mercado Pago (suscripciones) para Argentina, en pesos.
-
-**A quién se le vende:**
-- Pymes y comercios (venta directa).
-- Empresas medianas con varias sucursales (plan Empresa + setup).
-- Revendedores: agencias/consultores que lo ofrecen con su marca (white label / comisión).
-
-**Meta a 6 meses:** ~$3.400 USD/mes recurrentes con ~110 clientes.
+- **Planes y precios (ARS/mes):** Básico **$50.000**, Estándar **$75.000** (el más elegido), Pro **$125.000**.
+- **Control de acceso manual:** el administrador activa a cada cliente a mano (no hay alta automática con pago todavía).
+- **Prueba gratis de 7 días** que deriva a contacto (no auto-cobro).
+- **El agente responde con IA real** (no respuestas fijas).
+- **Responde en varios idiomas.**
+- **Multicanal:** WhatsApp, Instagram y chat web.
+- **Cada negocio usa su propio número** de WhatsApp (llave de identificación).
+- **Cobro:** Mercado Pago, en pesos (a implementar).
 
 ---
 
-## 8. Costos de WhatsApp
+## 4. Stack técnico
 
-Meta cobra por conversación (ventana de 24hs), no por mensaje. En Sudamérica:
-- Conversación iniciada por el cliente: ~$0,0187 USD.
-- Conversación iniciada por el negocio: ~$0,0533 USD.
+- **Frontend:** React + Vite + TypeScript.
+- **Base de datos + Auth + Storage:** Supabase (con RLS: cada cliente ve sólo sus datos).
+- **Hosting:** Vercel → **bolty-two.vercel.app** (deploy automático desde GitHub).
+- **Repositorio:** GitHub → **Bolty153/bolty** (rama `master`).
+- **Esquema de base:** todo el SQL idempotente está en `supabase/schema.sql`.
 
-**Modelo para arrancar (Opción A):** nosotros absorbemos el costo dentro del plan, con un límite de conversaciones por plan. A 200 conversaciones el costo es ~$4 USD; con $15 cobrado quedan ~$11 de margen.
+### 4.1 Tablas en Supabase (resumen)
+- `profiles` — acceso (is_active, is_admin).
+- `business_profiles` — datos del negocio + horarios + onboarding + plan.
+- `agent_configs` — configuración del agente (nombre, tono, tipo de negocio, instrucciones).
+- `products` — inventario (incluye código de barras).
+- `services` — servicios (sin stock; precio "a consultar"; duración).
+- `appointments` — turnos (con precio y estado "cobrado").
+- `customers` — memoria de clientes del negocio.
+- `payments` — finanzas (pagos de servicios, ventas, manual; forma de pago, descuentos, items).
+- `bank_accounts` — cuentas bancarias guardadas para transferencias.
+- `plan_requests` — pedidos de cambio de plan.
+- `support_tickets` — fallas / sugerencias / servicio a medida.
+- `clients` + `plans` — tablas del panel admin (plan real del cliente).
+- Buckets Storage: `logos`, `productos`, `remitos`, `servicios`, `soporte`.
 
-**A futuro (Opción B):** clientes grandes crean su propia cuenta de Meta y pagan ellos; nosotros cobramos solo el SaaS. Más escalable y sin riesgo.
-
----
-
-## 9. Stack técnico (todo gratis para empezar)
-
-- **GitHub:** donde vive el código (gratis, seguro, es la base; permite mudar el deploy a cualquier lado sin rehacer nada).
-- **Vercel:** hosting del frontend (web + panel del negocio). Gratis, se conecta a GitHub, se actualiza solo. (Corre sobre infraestructura de AWS; es seguro y usado en producción por empresas grandes.)
-- **Supabase:** base de datos (negocios, inventarios, conversaciones). Gratis hasta cierto volumen.
-- **Railway o Render:** backend que procesa los mensajes de WhatsApp. Plan gratis para arrancar.
-- **API de Claude (Anthropic):** el motor de IA del agente. Pago por uso, centavos por conversación.
-- **Twilio o Meta Cloud API:** conexión con WhatsApp e Instagram.
-- **Mercado Pago:** cobros y suscripciones.
-
-**Costo para empezar: $0.** El dominio propio (.com / .ar, ~$10-15 USD/año) se compra cuando haya primer cliente; mudarse de `bolty.vercel.app` al dominio propio es solo cambiar un DNS, sin tocar código.
-
----
-
-## 10. Plan de construcción por fases
-
-**Fase 1 — MVP (semana 1-2):** Panel del negocio (cargar info + inventario por Excel/CSV o manual) + chat web embebible + consulta de stock en tiempo real. Stack: React, API de Claude, Vercel, Supabase.
-
-**Fase 2 — WhatsApp + Instagram (semana 3-4):** Conexión de WhatsApp Business (Twilio o Meta API), respuestas automáticas 24/7, DMs de Instagram, panel de conversaciones, responder audios. Stack: Node.js, webhooks.
-
-**Fase 3 — IA visual (semana 5-6):** El cliente manda foto y el agente identifica el producto en el catálogo; OCR para leer remitos/facturas y actualizar stock. Stack: Claude Vision (multimodal).
-
-**Fase 4 — Cobro, funciones e inteligencia (semana 7-8):** Registro/login, planes y cobro con Mercado Pago, landing pública, dashboard con todas las funciones activables, reportes y alertas. Módulo de turnos para negocios de servicios. Sucursales y roles para empresas grandes.
+> Importante operativo: cuando se agrega una función que guarda algo nuevo, hay que **correr el SQL correspondiente en Supabase** (SQL Editor → Run) una vez. El código en GitHub/Vercel no crea las tablas solo.
 
 ---
 
-## 11. Pendientes por definir / hacer
+## 5. Lo que falta hacer (hoja de ruta)
 
-- Logo y colores (se hacen con IA más adelante).
-- Crear cuenta de GitHub (github.com → Sign up → email, contraseña y nombre de usuario → confirmar email). Gratis, 3 minutos.
-- Crear cuenta de Anthropic para la API de Claude (cuando se llegue al backend).
-- Negocio propio disponible como primer piloto de prueba.
-- Confirmar viabilidad técnica del resumen de voz diario (función 19).
-- Registrar la marca Bolty cuando el proyecto avance (atención a la similitud fonética con "Bolt", marca de IA y de transporte ya existente).
+### 5.1 Núcleo / inteligencia
+- **EL CEREBRO:** conectar la **API de Claude (Anthropic)** para que el agente responda de verdad, con los datos del negocio. (Requiere backend seguro, ej. Edge Function de Supabase, para no exponer la API key.)
+- **Entrenador conversacional:** que el dueño le hable al agente como a un empleado y aprenda, sin formularios.
+- **Asistente virtual de Bolty:** que al tocar la mascota se abra un asistente/ayuda dentro del panel.
+- **Entender audios** y **leer fotos** de productos (IA multimodal) — incluye lectura automática de **remitos** (la pantalla ya está lista).
+
+### 5.2 Planes, permisos y uso
+- **Permisos por plan:** habilitar/limitar funciones según el plan, incluyendo **líneas de teléfono extra** al subir de plan.
+- **Límites de uso por plan** (cantidad de conversaciones, etc.).
+- **Consumo de tokens y costo por cliente** visible en el panel admin.
+
+### 5.3 Canales y cobros
+- **Conexión real de WhatsApp / Instagram / chat web** (Meta Cloud API / Twilio).
+- **Sistema de cobros con Mercado Pago** (suscripciones).
+- **Conexión automática de inventario** (Tienda Nube y otros).
+
+### 5.4 Soporte y operación
+- **Acceso al dashboard del cliente con permiso del cliente** (modo soporte seguro, con consentimiento).
+
+### 5.5 Trámites / fuera del código
+- **Registro de la marca Bolty** en INPI (atención a la similitud con "Bolt").
+- **WhatsApp Business API** con Meta (alta y aprobación).
+- **Dominio propio** (.com / .ar) y migrar de `bolty-two.vercel.app`.
 
 ---
 
-## 12. Orden de trabajo recomendado
+## 6. Funciones del agente (visión completa, para referencia)
 
-1. Crear la cuenta de GitHub.
-2. Armar el primer prototipo de la web en un chat de Claude (para ver cómo queda antes de instalar nada).
-3. Cuando guste el prototipo, pasar a **Claude Code** (herramienta que construye el proyecto real en la computadora, con todos los archivos conectados y sincronizado con GitHub).
-4. Conectar GitHub + Vercel para que quede online.
-5. Comprar dominio propio cuando haya primer cliente.
+### Núcleo (siempre activas)
+- Avisa al dueño lo que no sabe responder y aprende de la respuesta.
+- Reportes inteligentes semanales (qué comprar, qué se vende, horarios fuertes, consultas que terminan en venta).
+- Responder audios.
+- Alertas en el momento (cliente importante, reclamo, pico de consultas).
+
+### Activables desde el dashboard
+- Vende y agenda dentro de la conversación.
+- Recupera clientes que preguntaron y no compraron.
+- Detecta idioma y responde igual.
+- Deriva a humano (enojo, reclamo, tema delicado).
+- Venta cruzada / productos relacionados.
+- Cupones y promos automáticas.
+- Personalidad propia (tono).
+- Resumen de voz diario (a confirmar viabilidad).
+- "¿Qué pregunta la gente?" y comparador de días.
+
+### Destacada
+- **Lista de espera inteligente:** si no hay stock, anota al cliente y le avisa cuando llega.
+
+### Módulo de turnos
+- Agenda completa para negocios de servicios (ya construida en el dashboard; falta la reserva automática desde los canales).
+
+### Empresas grandes
+- Varias sucursales en una cuenta, integración con sistemas que ya usan, roles de equipo.
 
 ---
 
-## 13. Nivel técnico del fundador
+## 7. Orden de trabajo sugerido (próximos pasos)
 
-No técnico. Todo el desarrollo se hace guiado paso a paso con Claude, explicando cada decisión en lenguaje simple.
+1. **El cerebro:** backend + API de Claude para que el agente responda de verdad.
+2. **Conectar WhatsApp** (primer canal real).
+3. **Permisos y límites por plan** + consumo/costo por cliente en admin.
+4. **Cobros con Mercado Pago.**
+5. Sumar **Instagram, web, audios y fotos**.
+6. **Trámites** (marca, WhatsApp API, dominio) en paralelo.
+
+---
+
+## 8. Nivel técnico del fundador
+
+No técnico. Todo el desarrollo se hace guiado paso a paso, explicando cada decisión en lenguaje simple. Cada cambio se sube a GitHub y se despliega solo en Vercel; los cambios de base de datos se aplican corriendo el SQL en Supabase.
