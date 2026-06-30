@@ -1503,6 +1503,17 @@ h1,h2,h3,h4,h5,.disp {
 .fin-acc-bar i { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--volt-2), var(--volt)); }
 .fin-acc-amt { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; min-width: 90px; text-align: right; }
 
+/* Caja de contraseña provisoria (admin) */
+.pass-box {
+  display: flex; align-items: center; gap: 10px; justify-content: space-between;
+  background: var(--surf-2); border: 1px dashed var(--line-2); border-radius: 12px;
+  padding: 12px 14px; margin-bottom: 6px;
+}
+.pass-box code {
+  font-family: 'Space Grotesk', monospace; font-size: 18px; font-weight: 700;
+  letter-spacing: .04em; color: var(--volt-ink); user-select: all;
+}
+
 /* ===== Soporte ===== */
 .support-pitch {
   background: linear-gradient(140deg, var(--volt-wash), var(--mint-wash));

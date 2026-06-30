@@ -544,3 +544,22 @@ create policy "soporte_write_own" on storage.objects
   for insert with check (
     bucket_id = 'soporte' and auth.uid()::text = (storage.foldername(name))[1]
   );
+
+-- =====================================================================
+-- 14) Contraseña provisoria: el cliente debe cambiarla al primer ingreso
+-- =====================================================================
+alter table public.profiles add column if not exists must_change_password boolean not null default false;
+
+-- Función segura: apaga must_change_password SÓLO para el usuario que la llama.
+-- Así el cliente puede finalizar el cambio sin tener permiso para editar su
+-- fila de profiles directamente (no puede tocar is_admin / is_active).
+create or replace function public.clear_must_change_password()
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.profiles set must_change_password = false where id = auth.uid();
+$$;
+
+grant execute on function public.clear_must_change_password() to authenticated;

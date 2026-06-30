@@ -18,6 +18,7 @@ import Auth from './views/Auth'
 import Landing from './views/Landing'
 import Admin from './views/admin/Admin'
 import BoltyMascot from './components/BoltyMascot'
+import ForcePasswordChange from './views/ForcePasswordChange'
 
 export type ViewId = 'inicio' | 'agente' | 'funciones' | 'reportes' | 'agenda' | 'canales' | 'negocio' | 'productos' | 'servicios' | 'finanzas'
 
@@ -126,7 +127,7 @@ function AccessDenied() {
 }
 
 function AppContent() {
-  const { session, profile, loading } = useAuth()
+  const { session, profile, loading, recovery } = useAuth()
   const [showLanding, setShowLanding] = useState(true)
 
   // Sin sesión SIEMPRE arrancamos por la landing. Al cerrar sesión, volvemos
@@ -146,12 +147,18 @@ function AppContent() {
     )
   }
 
+  // Recuperación de contraseña (venimos del link del email): pantalla para
+  // poner la contraseña nueva, antes que cualquier otra cosa.
+  if (recovery) return <ForcePasswordChange mode="recovery" />
+
   if (!session) {
     // En la landing mostramos a Bolty sólo en la esquina (sin bienvenida central).
     if (showLanding) return <><Landing onEnter={() => setShowLanding(false)} /><BoltyMascot cornerOnly /></>
     return <Auth onBack={() => setShowLanding(true)} />
   }
   if (!profile || !profile.is_active) return <AccessDenied />
+  // Primer ingreso con contraseña temporal: obligamos a crear una nueva antes de seguir.
+  if (profile.must_change_password) return <ForcePasswordChange />
   if (profile.is_admin) return <><Admin /><BoltyMascot /></>
   return <><Dashboard /><BoltyMascot /></>
 }

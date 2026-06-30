@@ -33,6 +33,10 @@ export default function AdminClientes({ onImpersonate }: Props) {
   // Estado de operación sobre una fila concreta
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [opErr, setOpErr]           = useState('')
+  // Contraseña provisoria al crear cliente
+  const [showPass, setShowPass]     = useState(false)
+  const [createdInfo, setCreatedInfo] = useState<{ name: string; password: string } | null>(null)
+  const [copied, setCopied]         = useState(false)
 
   async function load() {
     const [{ data: cl }, { data: pl }] = await Promise.all([
@@ -152,7 +156,7 @@ export default function AdminClientes({ onImpersonate }: Props) {
 
       const isActive = form.status === 'active' || form.status === 'trial'
       const [profRes, clientRes] = await Promise.all([
-        supabase.from('profiles').upsert({ id: uid, email: form.email.trim(), is_active: isActive, is_admin: false }),
+        supabase.from('profiles').upsert({ id: uid, email: form.email.trim(), is_active: isActive, is_admin: false, must_change_password: true }),
         supabase.from('clients').insert({
           id: uid, email: form.email.trim(),
           business_name: form.business_name || null,
@@ -170,7 +174,7 @@ export default function AdminClientes({ onImpersonate }: Props) {
 
       await logActivity('create_client', uid, 'client', { email: form.email })
       setShowCreate(false)
-      setMsg(`✓ Cliente "${form.business_name || form.email}" creado. Estado: ${statusLabel(form.status)}.`)
+      setCreatedInfo({ name: form.business_name || form.email, password: form.password })
       load()
     } finally { setSaving(false) }
   }
@@ -210,8 +214,15 @@ export default function AdminClientes({ onImpersonate }: Props) {
   }
 
   function openCreate() {
-    setForm({ ...EMPTY_FORM }); setFormErr(''); setMsg('')
+    setForm({ ...EMPTY_FORM }); setFormErr(''); setMsg(''); setShowPass(false)
     setShowCreate(true)
+  }
+
+  function copyPass() {
+    if (!createdInfo) return
+    navigator.clipboard?.writeText(createdInfo.password)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1800)
   }
 
   function openEdit(c: ClientRow) {
@@ -246,8 +257,28 @@ export default function AdminClientes({ onImpersonate }: Props) {
               <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="cliente@email.com" />
             </div>
             <div className="field">
-              <label>Contraseña inicial *</label>
-              <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="mín. 6 caracteres" minLength={6} />
+              <label>Contraseña temporal *</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <input
+                    type={showPass ? 'text' : 'password'}
+                    value={form.password}
+                    onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                    placeholder="mín. 6 caracteres" minLength={6}
+                    style={{ width: '100%', paddingRight: 40 }}
+                  />
+                  <button type="button" onClick={() => setShowPass(s => !s)} title={showPass ? 'Ocultar' : 'Mostrar'}
+                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-faint)', padding: 4, display: 'flex', lineHeight: 0 }}>
+                    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                  </button>
+                </div>
+                <button type="button" className="abtn" onClick={() => { setForm(f => ({ ...f, password: genPassword() })); setShowPass(true) }}>
+                  Generar automática
+                </button>
+              </div>
+              <div className="hint" style={{ fontSize: 12, color: 'var(--ink-faint)', marginTop: 6 }}>
+                El cliente la cambia obligatoriamente al entrar por primera vez. La "automática" usa letras y números fáciles de leer.
+              </div>
             </div>
           </>
         )}
@@ -441,10 +472,41 @@ export default function AdminClientes({ onImpersonate }: Props) {
 
       {showCreate && modalForm(false)}
       {editClient && modalForm(true)}
+
+      {createdInfo && (
+        <div className="modal-ov" onClick={() => setCreatedInfo(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: 440, textAlign: 'center' }}>
+            <div className="confirm-ic" style={{ background: 'var(--mint-wash)', color: 'var(--mint)', margin: '0 auto 16px' }}>
+              <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="28" height="28"><path d="M20 6L9 17l-5-5" /></svg>
+            </div>
+            <h2>Cliente creado</h2>
+            <p style={{ fontSize: 13.5, color: 'var(--ink-soft)', lineHeight: 1.6, margin: '8px 0 18px' }}>
+              Pasale esta contraseña a <b>{createdInfo.name}</b>. Cuando entre por primera vez, va a tener que cambiarla.
+            </p>
+            <div className="pass-box">
+              <code>{createdInfo.password}</code>
+              <button className="abtn primary" onClick={copyPass}>{copied ? '✓ Copiado' : 'Copiar'}</button>
+            </div>
+            <div className="modal-actions" style={{ justifyContent: 'center' }}>
+              <button className="btn" onClick={() => setCreatedInfo(null)}>Listo</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
 
 function isPastDue(c: ClientRow) {
   return !!c.paid_until && new Date(c.paid_until) < new Date() && c.is_active
+}
+
+// Contraseña aleatoria legible (sin caracteres confusos: l, 1, I, O, 0).
+function genPassword(len = 10): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+  const arr = new Uint32Array(len)
+  crypto.getRandomValues(arr)
+  let out = ''
+  for (let i = 0; i < len; i++) out += chars[arr[i] % chars.length]
+  return out
 }

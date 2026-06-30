@@ -50,7 +50,9 @@ export default function Auth({ onBack }: Props) {
     setError('')
     setSuccess('')
     setForgotLoading(true)
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim())
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin,
+    })
     if (error) setError(translateForgotError(error.message))
     else setSuccess('Te mandamos un email con el link para recuperar tu contraseña. Revisá tu casilla.')
     setForgotLoading(false)

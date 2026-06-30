@@ -11,7 +11,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,       // Guarda la sesión en localStorage (default, pero explícito)
     autoRefreshToken: true,     // Refresca el JWT automáticamente (default, pero explícito)
-    detectSessionInUrl: false,  // No usamos OAuth ni magic links; desactivar evita
-                                // que cambios en la URL se interpreten como eventos de auth
+    detectSessionInUrl: true,   // Necesario para procesar el link de "recuperar contraseña"
+                                // (el token llega en el hash de la URL).
   },
 })
