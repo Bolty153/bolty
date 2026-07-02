@@ -111,7 +111,7 @@ function SupportAccessModal({ request, onAccept, onDeny, onDefer }: {
           <button className="abtn" onClick={onDeny}>Rechazar</button>
           <button className="btn" onClick={onAccept} style={{ background: 'var(--volt)' }}>Aceptar acceso</button>
         </div>
-        <button onClick={onDefer} style={{ background: 'none', border: 'none', color: 'var(--ink-faint)', fontSize: 12.5, cursor: 'pointer', marginTop: 12, fontFamily: 'inherit' }}>
+        <button className="abtn" onClick={onDefer} style={{ width: '100%', justifyContent: 'center', marginTop: 10, color: 'var(--ink-soft)' }}>
           Ahora no (te lo recordamos en la campanita)
         </button>
       </div>
