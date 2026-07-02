@@ -12,10 +12,11 @@ export interface AccountState {
 
 export const emptyAccount = (): AccountState => ({ name: '', save: false, bank: '', number: '', alias: '', holder: '' })
 
-export default function AccountFields({ accounts, value, onChange }: {
+export default function AccountFields({ accounts, value, onChange, label }: {
   accounts: BankAccount[]
   value: AccountState
   onChange: (v: AccountState) => void
+  label?: string
 }) {
   const set = (patch: Partial<AccountState>) => onChange({ ...value, ...patch })
 
@@ -25,7 +26,7 @@ export default function AccountFields({ accounts, value, onChange }: {
 
   return (
     <div className="field">
-      <label>¿A qué cuenta entró?</label>
+      <label>{label ?? '¿A qué cuenta entró?'}</label>
       <Combobox
         value={value.name}
         onChange={n => set({ name: n })}

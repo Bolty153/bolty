@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import Combobox from '../Combobox'
-import { MethodPicker, AdjustmentPicker } from './PaymentForm'
+import { MethodPicker, CardTypePicker, AdjustmentPicker } from './PaymentForm'
 import AccountFields, { emptyAccount } from './AccountFields'
 import type { AccountState } from './AccountFields'
 import { computeAdjustment, fmtMoney } from '../../hooks/useFinance'
-import type { PaymentInput, PayMethod, PaymentItem } from '../../hooks/useFinance'
+import type { PaymentInput, PayMethod, CardType, PaymentItem } from '../../hooks/useFinance'
 import type { BankAccount, BankAccountInput } from '../../hooks/useBankAccounts'
 
 const todayKey = () => {
@@ -28,6 +28,7 @@ export default function SaleForm({
   const [rows, setRows] = useState<Row[]>([{ name: '', qty: '1' }])
   const [discountStock, setDiscountStock] = useState(true)
   const [method, setMethod] = useState<PayMethod>('efectivo')
+  const [cardType, setCardType] = useState<CardType>('debito')
   const [account, setAccount] = useState<AccountState>(emptyAccount())
   const [adjType, setAdjType] = useState<'descuento' | 'recargo'>('descuento')
   const [adjValue, setAdjValue] = useState('')
@@ -60,10 +61,13 @@ export default function SaleForm({
   function addRow() { setRows(prev => [...prev, { name: '', qty: '1' }]) }
   function removeRow(i: number) { setRows(prev => prev.filter((_, idx) => idx !== i)) }
 
-  const accountText = method === 'transferencia' ? account.name.trim() : null
+  // La cuenta/terminal destino aplica a transferencia y a tarjeta.
+  const usesAccount = method === 'transferencia' || method === 'tarjeta'
+  const accountText = usesAccount ? (account.name.trim() || null) : null
+  const cardTypeVal: CardType | null = method === 'tarjeta' ? cardType : null
 
   async function maybeSaveAccount() {
-    if (method === 'transferencia' && account.save && account.name.trim()) {
+    if (usesAccount && account.save && account.name.trim()) {
       await onSaveAccount({ name: account.name.trim(), bank: account.bank, number: account.number, alias_cbu: account.alias, holder: account.holder })
     }
   }
@@ -84,6 +88,7 @@ export default function SaleForm({
           amount: amt,
           method,
           account: accountText,
+          card_type: cardTypeVal,
           adjustment: 0,
           pay_date: date,
         }, false)
@@ -102,6 +107,7 @@ export default function SaleForm({
         amount: final,
         method,
         account: accountText,
+        card_type: cardTypeVal,
         adjustment,
         items: lineItems,
         pay_date: date,
@@ -171,7 +177,11 @@ export default function SaleForm({
             </label>
 
             <MethodPicker method={method} setMethod={setMethod} />
-            {method === 'transferencia' && <AccountFields accounts={accounts} value={account} onChange={setAccount} />}
+            {method === 'tarjeta' && <CardTypePicker cardType={cardType} setCardType={setCardType} />}
+            {usesAccount && (
+              <AccountFields accounts={accounts} value={account} onChange={setAccount}
+                label={method === 'tarjeta' ? '¿A qué cuenta o terminal entró? (opcional)' : undefined} />
+            )}
             <AdjustmentPicker
               adjType={adjType} setAdjType={setAdjType}
               adjValue={adjValue} setAdjValue={setAdjValue}
@@ -194,7 +204,11 @@ export default function SaleForm({
               <input type="text" value={manualDesc} onChange={e => setManualDesc(e.target.value)} placeholder="Ej: Venta de mostrador" />
             </div>
             <MethodPicker method={method} setMethod={setMethod} />
-            {method === 'transferencia' && <AccountFields accounts={accounts} value={account} onChange={setAccount} />}
+            {method === 'tarjeta' && <CardTypePicker cardType={cardType} setCardType={setCardType} />}
+            {usesAccount && (
+              <AccountFields accounts={accounts} value={account} onChange={setAccount}
+                label={method === 'tarjeta' ? '¿A qué cuenta o terminal entró? (opcional)' : undefined} />
+            )}
             <div className="field">
               <label>Fecha</label>
               <input type="date" value={date} onChange={e => setDate(e.target.value)} />

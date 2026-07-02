@@ -3,7 +3,9 @@ import { supabase } from '../lib/supabase'
 import { useEffectiveUserId } from '../context/AuthContext'
 
 export type PayKind = 'servicio' | 'producto' | 'manual'
-export type PayMethod = 'efectivo' | 'transferencia'
+// Cómo te PAGÓ el cliente (ingreso). Ojo: es distinto del ORIGEN de un gasto.
+export type PayMethod = 'efectivo' | 'transferencia' | 'tarjeta'
+export type CardType = 'debito' | 'credito'
 
 export interface PaymentItem {
   product_id?: string
@@ -20,7 +22,8 @@ export interface Payment {
   description: string | null
   amount: number
   method: PayMethod
-  account: string | null
+  account: string | null         // destino: cuenta (transferencia) o terminal (tarjeta)
+  card_type?: string | null      // 'debito' | 'credito' (solo si method = tarjeta)
   adjustment: number
   items: PaymentItem[] | null
   pay_date: string   // 'YYYY-MM-DD'
@@ -34,6 +37,7 @@ export interface PaymentInput {
   amount: number
   method: PayMethod
   account?: string | null
+  card_type?: CardType | null
   adjustment?: number
   items?: PaymentItem[] | null
   pay_date: string
@@ -75,9 +79,13 @@ export function useFinance() {
 
   const addPayment = useCallback(async (input: PaymentInput): Promise<Payment> => {
     if (!userId) throw new Error('No hay sesión activa')
+    // Solo mandamos card_type cuando hay valor: así los cobros efectivo/transferencia
+    // siguen funcionando aunque todavía no se haya corrido el ALTER de la columna.
+    const payload: Record<string, unknown> = { ...input, user_id: userId }
+    if (!payload.card_type) delete payload.card_type
     const { data, error } = await supabase
       .from('payments')
-      .insert({ ...input, user_id: userId })
+      .insert(payload)
       .select()
       .single()
     if (error) throw error

@@ -762,3 +762,57 @@ as $$
 $$;
 
 grant execute on function public.global_search(uuid, text, int) to authenticated;
+
+-- =====================================================================
+-- 18) Ingreso con TARJETA + GASTOS (egresos)
+--     Distinción clave: en el INGRESO, method='tarjeta' es cómo te pagó el
+--     cliente (card_type débito/crédito; account = terminal/cuenta destino).
+--     En el GASTO, source es de DÓNDE sale la plata (efectivo / cuenta / tarjeta
+--     de la empresa). Son conceptos separados y viven en tablas distintas.
+-- =====================================================================
+
+-- (a) Ingreso con tarjeta: sub-tipo débito/crédito en payments.
+--     El destino (terminal/cuenta) sigue en payments.account, igual que transferencia.
+alter table public.payments add column if not exists card_type text;   -- 'debito' | 'credito'
+
+-- (b) Gastos: tabla separada (un gasto NUNCA es facturación/ingreso).
+create table if not exists public.expenses (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null references auth.users(id) on delete cascade,
+  amount       numeric not null,
+  category     text not null,
+  -- de DÓNDE sale la plata: 'efectivo' | 'cuenta_bancaria' | 'tarjeta_empresa'
+  source       text not null,
+  account      text,           -- si source es cuenta_bancaria o tarjeta_empresa: cuál
+  description  text,
+  supplier     text,
+  expense_date date not null default current_date,
+  created_at   timestamptz not null default now()
+);
+
+create index if not exists expenses_idx on public.expenses(user_id, expense_date desc);
+
+alter table public.expenses enable row level security;
+
+drop policy if exists "expenses_select_own" on public.expenses;
+create policy "expenses_select_own" on public.expenses
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "expenses_insert_own" on public.expenses;
+create policy "expenses_insert_own" on public.expenses
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "expenses_update_own" on public.expenses;
+create policy "expenses_update_own" on public.expenses
+  for update using (auth.uid() = user_id);
+
+drop policy if exists "expenses_delete_own" on public.expenses;
+create policy "expenses_delete_own" on public.expenses
+  for delete using (auth.uid() = user_id);
+
+-- Modo soporte: el admin ve/edita los gastos del cliente (igual que el resto).
+drop policy if exists "expenses_admin_all" on public.expenses;
+create policy "expenses_admin_all" on public.expenses
+  for all using (public.is_current_user_admin()) with check (public.is_current_user_admin());
+
+grant select, insert, update, delete on public.expenses to anon, authenticated;

@@ -3,7 +3,7 @@ import Combobox from '../Combobox'
 import AccountFields, { emptyAccount } from './AccountFields'
 import type { AccountState } from './AccountFields'
 import { computeAdjustment, fmtMoney } from '../../hooks/useFinance'
-import type { PaymentInput, PayMethod } from '../../hooks/useFinance'
+import type { PaymentInput, PayMethod, CardType } from '../../hooks/useFinance'
 import type { BankAccount, BankAccountInput } from '../../hooks/useBankAccounts'
 
 const todayKey = () => {
@@ -27,6 +27,7 @@ export default function PaymentForm({
   const [service, setService] = useState(initial?.service ?? '')
   const [base, setBase] = useState(initial?.amount != null ? String(initial.amount) : '')
   const [method, setMethod] = useState<PayMethod>('efectivo')
+  const [cardType, setCardType] = useState<CardType>('debito')
   const [account, setAccount] = useState<AccountState>(emptyAccount())
   const [adjType, setAdjType] = useState<'descuento' | 'recargo'>('descuento')
   const [adjValue, setAdjValue] = useState('')
@@ -39,13 +40,16 @@ export default function PaymentForm({
   const adjustment = computeAdjustment(baseNum, adjType, adjValue, adjUnit)
   const final = Math.max(0, baseNum + adjustment)
 
+  // La cuenta/terminal destino aplica a transferencia y a tarjeta.
+  const usesAccount = method === 'transferencia' || method === 'tarjeta'
+
   async function submit() {
     setErr(null)
     if (baseNum <= 0) return setErr('Ingresá el monto del servicio.')
     if (method === 'transferencia' && !account.name.trim()) return setErr('Indicá a qué cuenta entró la transferencia.')
     setSaving(true)
     try {
-      if (method === 'transferencia' && account.save && account.name.trim()) {
+      if (usesAccount && account.save && account.name.trim()) {
         await onSaveAccount({ name: account.name.trim(), bank: account.bank, number: account.number, alias_cbu: account.alias, holder: account.holder })
       }
       await onSave({
@@ -54,7 +58,8 @@ export default function PaymentForm({
         description: service.trim() || 'Pago de servicio',
         amount: final,
         method,
-        account: method === 'transferencia' ? account.name.trim() : null,
+        account: usesAccount ? (account.name.trim() || null) : null,
+        card_type: method === 'tarjeta' ? cardType : null,
         adjustment,
         pay_date: date,
       })
@@ -93,7 +98,13 @@ export default function PaymentForm({
         </div>
 
         <MethodPicker method={method} setMethod={setMethod} />
-        {method === 'transferencia' && <AccountFields accounts={accounts} value={account} onChange={setAccount} />}
+        {method === 'tarjeta' && <CardTypePicker cardType={cardType} setCardType={setCardType} />}
+        {usesAccount && (
+          <AccountFields
+            accounts={accounts} value={account} onChange={setAccount}
+            label={method === 'tarjeta' ? '¿A qué cuenta o terminal entró? (opcional)' : undefined}
+          />
+        )}
 
         <AdjustmentPicker
           adjType={adjType} setAdjType={setAdjType}
@@ -132,6 +143,21 @@ export function MethodPicker({ method, setMethod }: {
       <div className="chips">
         <div className={`chip${method === 'efectivo' ? ' sel' : ''}`} onClick={() => setMethod('efectivo')}>💵 Efectivo</div>
         <div className={`chip${method === 'transferencia' ? ' sel' : ''}`} onClick={() => setMethod('transferencia')}>🏦 Transferencia</div>
+        <div className={`chip${method === 'tarjeta' ? ' sel' : ''}`} onClick={() => setMethod('tarjeta')}>💳 Tarjeta</div>
+      </div>
+    </div>
+  )
+}
+
+export function CardTypePicker({ cardType, setCardType }: {
+  cardType: CardType; setCardType: (c: CardType) => void
+}) {
+  return (
+    <div className="field">
+      <label>Tipo de tarjeta</label>
+      <div className="chips">
+        <div className={`chip${cardType === 'debito' ? ' sel' : ''}`} onClick={() => setCardType('debito')}>Débito</div>
+        <div className={`chip${cardType === 'credito' ? ' sel' : ''}`} onClick={() => setCardType('credito')}>Crédito</div>
       </div>
     </div>
   )
