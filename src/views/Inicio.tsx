@@ -30,6 +30,11 @@ export default function Inicio({ onNavigate }: Props) {
 
   const name = business.business_name || 'tu negocio'
   const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'
+  // Saludo según la hora LOCAL del navegador del cliente.
+  const hour = new Date().getHours()
+  const greeting = (hour >= 5 && hour < 14) ? 'Buenos días'
+    : (hour >= 14 && hour < 20) ? 'Buenas tardes'
+    : 'Buenas noches'
   const agentInitial = (agent.agent_name || 'B')[0].toUpperCase()
   const hours = business.business_hours ?? {}
 
@@ -72,7 +77,7 @@ export default function Inicio({ onNavigate }: Props) {
             }
           </div>
           <div>
-            <h1>Buenas, {name}</h1>
+            <h1>{greeting}, {name}</h1>
             <div className="sub">Tu panel de actividad de Bolty</div>
           </div>
         </div>

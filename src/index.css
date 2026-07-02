@@ -50,19 +50,19 @@ h1,h2,h3,h4,h5,.disp {
   padding-right: 20px; border-right: 1px solid var(--line); height: 100%;
 }
 .brand-logo {
-  width: 42px; height: 42px; border-radius: 11px;
+  width: 48px; height: 48px; border-radius: 13px;
   background: linear-gradient(135deg,#6029ff,#8b5cff);
   display: flex; align-items: center; justify-content: center;
   box-shadow: var(--sh-volt); position: relative; overflow: hidden;
 }
-.brand-logo svg { width: 30px; height: 30px; position: relative; z-index: 1; }
+.brand-logo svg { width: 34px; height: 34px; position: relative; z-index: 1; }
 .brand-logo::after {
   content: ""; position: absolute; inset: 0;
   background: radial-gradient(circle at 70% 20%, rgba(255,255,255,.4), transparent 60%);
 }
 .brand-txt { line-height: 1; }
-.brand-txt .n { font-family: 'Space Grotesk'; font-weight: 700; font-size: 20px; color: var(--ink); }
-.brand-txt .f { font-size: 8px; font-weight: 600; letter-spacing: .02em; color: var(--ink-faint); text-transform: uppercase; margin-top: 2px; white-space: nowrap; }
+.brand-txt .n { font-family: 'Space Grotesk'; font-weight: 700; font-size: 23px; color: var(--ink); }
+.brand-txt .f { font-size: 9px; font-weight: 600; letter-spacing: .02em; color: var(--ink-faint); text-transform: uppercase; margin-top: 2px; white-space: nowrap; }
 .brand-txt .f b { color: var(--ink-2); font-weight: 700; }
 .topnav-search {
   flex: 1; display: flex; align-items: center; gap: 9px;
