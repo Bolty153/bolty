@@ -2,8 +2,16 @@ import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useBusinessContext } from '../../context/BusinessContext'
 import { useSupportAccessCtx, fmtDurationText } from '../../context/SupportAccessContext'
+import GlobalSearch, { type NavFocus } from '../search/GlobalSearch'
+import type { ViewId } from '../../App'
+import type { Customer } from '../../hooks/useCustomers'
 
-export default function TopNav() {
+interface Props {
+  onNavigate: (view: ViewId, focus?: NavFocus) => void
+  onOpenCustomer: (c: Customer) => void
+}
+
+export default function TopNav({ onNavigate, onOpenCustomer }: Props) {
   const { session, signOut } = useAuth()
   const { business } = useBusinessContext()
   const { pending, accept, deny } = useSupportAccessCtx()
@@ -41,12 +49,7 @@ export default function TopNav() {
         </div>
       </div>
 
-      <div className="topnav-search">
-        <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.3-4.3" />
-        </svg>
-        Buscar conversaciones, productos…
-      </div>
+      <GlobalSearch onNavigate={onNavigate} onOpenCustomer={onOpenCustomer} />
 
       <div className="topnav-right">
         {/* Campanita de notificaciones */}

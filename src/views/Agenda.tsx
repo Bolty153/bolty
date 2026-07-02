@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, useEffect } from 'react'
+import type { ViewFocus } from '../App'
 import { useAppointments } from '../hooks/useAppointments'
 import type { Appointment, AppointmentInput } from '../hooks/useAppointments'
 import { useServices, fmtDuration } from '../hooks/useServices'
@@ -42,7 +43,7 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 const fmtLong = (d: Date) => cap(new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }).format(d))
 const fmtShort = (d: Date) => new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'short' }).format(d)
 
-export default function Agenda() {
+export default function Agenda({ focus }: { focus?: ViewFocus }) {
   const { appointments, loading, addAppointment, updateAppointment, deleteAppointment } = useAppointments()
   const { services } = useServices()
   const { customers, upsertFromAppointment } = useCustomers()
@@ -64,6 +65,12 @@ export default function Agenda() {
   const [toCancel, setToCancel] = useState<Appointment | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [payFor, setPayFor] = useState<Appointment | null>(null)
+
+  // Si venimos del buscador global a un turno, saltamos a su día.
+  useEffect(() => {
+    if (focus?.date) { const d = fromKey(focus.date); setRef(d); setSelected(d) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus?.ts])
 
   const weekDays = useMemo(() => {
     const start = startOfWeek(ref)

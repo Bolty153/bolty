@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, useEffect } from 'react'
+import type { ViewFocus } from '../App'
 import { useServices, fmtDuration } from '../hooks/useServices'
 import type { Service, ServiceInput } from '../hooks/useServices'
 import { parseServicesFile, downloadServicesTemplate } from '../lib/serviceImport'
@@ -13,13 +14,16 @@ const ALL = '__all__'
 const NONE = '__none__'
 const DURATION_PRESETS = [15, 30, 45, 60, 90, 120]
 
-export default function Servicios() {
+export default function Servicios({ focus }: { focus?: ViewFocus }) {
   const {
     services, loading, error, reload,
     addService, updateService, deleteService, importServices, uploadImage,
   } = useServices()
 
   const [search, setSearch] = useState('')
+
+  // Prefiltro cuando venimos del buscador global.
+  useEffect(() => { if (focus?.term != null) setSearch(focus.term) }, [focus?.ts])
   const [catFilter, setCatFilter] = useState<string>(ALL)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Service | null>(null)

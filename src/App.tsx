@@ -20,27 +20,44 @@ import Landing from './views/Landing'
 import Admin from './views/admin/Admin'
 import BoltyMascot from './components/BoltyMascot'
 import ForcePasswordChange from './views/ForcePasswordChange'
+import CustomerFicha from './components/search/CustomerFicha'
+import type { NavFocus } from './components/search/GlobalSearch'
+import type { Customer } from './hooks/useCustomers'
 
 export type ViewId = 'inicio' | 'agente' | 'funciones' | 'reportes' | 'agenda' | 'canales' | 'negocio' | 'productos' | 'servicios' | 'finanzas'
 
-function renderView(view: ViewId, onNavigate: (v: ViewId) => void) {
+// Foco de navegación: al abrir un resultado del buscador prefiltramos la vista
+// destino. `ts` fuerza que el efecto de la vista se dispare aunque el término repita.
+export interface ViewFocus { term?: string; date?: string; ts: number }
+
+function renderView(view: ViewId, onNavigate: (v: ViewId) => void, focus: ViewFocus | null) {
+  const f = focus ?? undefined
   switch (view) {
     case 'inicio':    return <Inicio onNavigate={onNavigate} />
     case 'agente':    return <Agente />
     case 'funciones': return <Funciones />
     case 'reportes':  return <Reportes />
-    case 'agenda':    return <Agenda />
+    case 'agenda':    return <Agenda focus={f} />
     case 'canales':   return <Canales />
     case 'negocio':   return <MiNegocio onNavigate={onNavigate} />
-    case 'productos': return <Productos />
-    case 'servicios': return <Servicios />
-    case 'finanzas':  return <Finanzas />
+    case 'productos': return <Productos focus={f} />
+    case 'servicios': return <Servicios focus={f} />
+    case 'finanzas':  return <Finanzas focus={f} />
   }
 }
 
 function DashboardContent() {
   const [view, setView] = useState<ViewId>('inicio')
+  const [focus, setFocus] = useState<ViewFocus | null>(null)
+  const [ficha, setFicha] = useState<Customer | null>(null)
   const { business, agent, loading } = useBusinessContext()
+
+  // Navegación con foco opcional. Sin foco (ej. click en el sidebar) limpia el
+  // prefiltro para no reaplicar un término viejo al re-montar la vista.
+  function navigateTo(v: ViewId, f?: NavFocus) {
+    setFocus(f ? { ...f, ts: Date.now() } : null)
+    setView(v)
+  }
 
   if (loading) {
     return (
@@ -68,21 +85,22 @@ function DashboardContent() {
 
   return (
     <>
-      <TopNav />
+      <TopNav onNavigate={navigateTo} onOpenCustomer={setFicha} />
       <div className="shell">
         <Sidebar
           activeView={safeView}
-          onNavigate={setView}
+          onNavigate={v => navigateTo(v)}
           showProductos={showProductos}
           showServicios={showServicios}
           showAgenda={showAgenda}
         />
         <main className="main">
           <div key={safeView} className="view-anim">
-            {renderView(safeView, setView)}
+            {renderView(safeView, v => navigateTo(v), focus)}
           </div>
         </main>
       </div>
+      {ficha && <CustomerFicha customer={ficha} onClose={() => setFicha(null)} />}
     </>
   )
 }

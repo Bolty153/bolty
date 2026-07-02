@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, useEffect } from 'react'
+import type { ViewFocus } from '../App'
 import { useProducts, LOW_STOCK_THRESHOLD } from '../hooks/useProducts'
 import type { Product, ProductInput } from '../hooks/useProducts'
 import { parseProductsFile, downloadTemplate } from '../lib/productImport'
@@ -15,7 +16,7 @@ const fmtPrice = (n: number) =>
 const ALL = '__all__'
 const NONE = '__none__'
 
-export default function Productos() {
+export default function Productos({ focus }: { focus?: ViewFocus }) {
   const {
     products, loading, error, reload,
     addProduct, updateProduct, deleteProduct, importProducts,
@@ -23,6 +24,9 @@ export default function Productos() {
   } = useProducts()
 
   const [search, setSearch] = useState('')
+
+  // Si llegamos desde el buscador global, prefiltramos por el término.
+  useEffect(() => { if (focus?.term != null) setSearch(focus.term) }, [focus?.ts])
   const [catFilter, setCatFilter] = useState<string>(ALL)
   const [lowOnly, setLowOnly] = useState(false)
   const [quickMode, setQuickMode] = useState(false)

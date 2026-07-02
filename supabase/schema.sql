@@ -690,3 +690,75 @@ create policy "buckets_admin_all" on storage.objects
     bucket_id in ('logos', 'productos', 'remitos', 'servicios', 'soporte')
     and public.is_current_user_admin()
   );
+
+-- =====================================================================
+-- 17) Buscador global insensible a acentos y mayúsculas
+--     Usa unaccent() en ambos lados del ilike. Una sola función (RPC) que
+--     devuelve los 5 grupos ya armados. security invoker => respeta RLS.
+--     Recibe target_uid para funcionar también en modo soporte (el admin
+--     busca sobre los datos del cliente; RLS admin-all lo habilita).
+-- =====================================================================
+create extension if not exists unaccent with schema extensions;
+
+create or replace function public.global_search(target_uid uuid, q text, per int default 5)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = public, extensions
+as $$
+  with pat as (select '%' || unaccent(coalesce(q, '')) || '%' as p)
+  select jsonb_build_object(
+    'productos', (
+      select coalesce(jsonb_agg(to_jsonb(t) order by t.name), '[]'::jsonb) from (
+        select * from public.products x
+        where x.user_id = target_uid
+          and ( unaccent(x.name) ilike (select p from pat)
+             or unaccent(coalesce(x.barcode, '')) ilike (select p from pat)
+             or unaccent(coalesce(x.category, '')) ilike (select p from pat) )
+        order by x.name limit per
+      ) t
+    ),
+    'servicios', (
+      select coalesce(jsonb_agg(to_jsonb(t) order by t.name), '[]'::jsonb) from (
+        select * from public.services x
+        where x.user_id = target_uid
+          and ( unaccent(x.name) ilike (select p from pat)
+             or unaccent(coalesce(x.category, '')) ilike (select p from pat) )
+        order by x.name limit per
+      ) t
+    ),
+    'clientes', (
+      select coalesce(jsonb_agg(to_jsonb(t) order by t.name), '[]'::jsonb) from (
+        select * from public.customers x
+        where x.user_id = target_uid
+          and ( unaccent(x.name) ilike (select p from pat)
+             or unaccent(coalesce(x.phone, '')) ilike (select p from pat)
+             or unaccent(coalesce(x.doc_id, '')) ilike (select p from pat) )
+        order by x.name limit per
+      ) t
+    ),
+    'turnos', (
+      select coalesce(jsonb_agg(to_jsonb(t) order by t.appt_date desc), '[]'::jsonb) from (
+        select * from public.appointments x
+        where x.user_id = target_uid
+          and ( unaccent(x.customer_name) ilike (select p from pat)
+             or unaccent(coalesce(x.service_name, '')) ilike (select p from pat)
+             or unaccent(coalesce(x.phone, '')) ilike (select p from pat) )
+        order by x.appt_date desc limit per
+      ) t
+    ),
+    'pagos', (
+      select coalesce(jsonb_agg(to_jsonb(t) order by t.pay_date desc), '[]'::jsonb) from (
+        select * from public.payments x
+        where x.user_id = target_uid
+          and ( unaccent(coalesce(x.customer_name, '')) ilike (select p from pat)
+             or unaccent(coalesce(x.description, '')) ilike (select p from pat)
+             or unaccent(coalesce(x.account, '')) ilike (select p from pat) )
+        order by x.pay_date desc limit per
+      ) t
+    )
+  );
+$$;
+
+grant execute on function public.global_search(uuid, text, int) to authenticated;

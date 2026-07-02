@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+import type { ViewFocus } from '../App'
 import { useFinance, fmtMoney } from '../hooks/useFinance'
 import type { Payment } from '../hooks/useFinance'
 import { useProducts } from '../hooks/useProducts'
@@ -13,7 +14,7 @@ const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.get
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 const shortMoney = (n: number) => n >= 1000 ? `$${Math.round(n / 1000)}k` : `$${Math.round(n)}`
 
-export default function Finanzas() {
+export default function Finanzas({ focus }: { focus?: ViewFocus }) {
   const { payments, loading, addPayment, deletePayment } = useFinance()
   const { products, bulkUpdateStock } = useProducts()
   const { services } = useServices()
@@ -23,6 +24,20 @@ export default function Finanzas() {
   const [saleOpen, setSaleOpen] = useState(false)
   const [toDelete, setToDelete] = useState<Payment | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [finSearch, setFinSearch] = useState('')
+
+  // Prefiltro de movimientos cuando venimos del buscador global.
+  useEffect(() => { if (focus?.term != null) setFinSearch(focus.term) }, [focus?.ts])
+
+  // Movimientos visibles (filtrados por el buscador de esta sección).
+  const shownPayments = useMemo(() => {
+    const q = finSearch.trim().toLowerCase()
+    const list = !q ? payments : payments.filter(p =>
+      (p.customer_name || '').toLowerCase().includes(q) ||
+      (p.description || '').toLowerCase().includes(q) ||
+      (p.account || '').toLowerCase().includes(q))
+    return list.slice(0, 20)
+  }, [payments, finSearch])
 
   const today = useMemo(() => { const t = new Date(); t.setHours(0, 0, 0, 0); return t }, [])
   const todayKey = toKey(today)
@@ -219,7 +234,14 @@ export default function Finanzas() {
 
       {/* Últimos movimientos */}
       <div className="card" style={{ marginTop: 18 }}>
-        <div className="card-h"><h3>Últimos movimientos</h3></div>
+        <div className="card-h" style={{ gap: 12, flexWrap: 'wrap' }}>
+          <h3>Últimos movimientos</h3>
+          {payments.length > 0 && (
+            <input className="adm-search" style={{ maxWidth: 240, marginLeft: 'auto' }}
+              placeholder="Buscar por cliente, detalle o cuenta…"
+              value={finSearch} onChange={e => setFinSearch(e.target.value)} />
+          )}
+        </div>
         {loading ? (
           <div style={{ padding: '24px 0', color: 'var(--ink-faint)', fontSize: 14, textAlign: 'center' }}>Cargando…</div>
         ) : payments.length === 0 ? (
@@ -235,7 +257,11 @@ export default function Finanzas() {
           </div>
         ) : (
           <div className="fin-list">
-            {payments.slice(0, 20).map(p => {
+            {shownPayments.length === 0 ? (
+              <div style={{ padding: '24px 0', color: 'var(--ink-faint)', fontSize: 13.5, textAlign: 'center' }}>
+                Sin movimientos que coincidan con “{finSearch}”.
+              </div>
+            ) : shownPayments.map(p => {
               const [y, m, d] = p.pay_date.split('-')
               const kindLabel = p.kind === 'servicio' ? 'Servicio' : p.kind === 'producto' ? 'Producto' : 'Venta'
               return (
