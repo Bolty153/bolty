@@ -563,3 +563,130 @@ as $$
 $$;
 
 grant execute on function public.clear_must_change_password() to authenticated;
+
+-- =====================================================================
+-- 15) Acceso al dashboard del cliente con permiso (modo soporte)
+--     El admin PIDE acceso; el cliente lo acepta/rechaza y puede cortarlo.
+--     Consentimiento + transparencia + registro (no es un sandbox de
+--     seguridad: el admin ya puede leer por su rol, esto es el flujo de
+--     permiso y auditoría). Acceso de única vez: cada vez, nueva fila.
+-- =====================================================================
+create table if not exists public.support_access_requests (
+  id                uuid primary key default gen_random_uuid(),
+  client_profile_id uuid not null references auth.users(id) on delete cascade,  -- a quién se accede
+  admin_id          uuid not null references auth.users(id) on delete cascade,  -- quién pide
+  -- pending → active (aceptó) / denied (rechazó)
+  -- active  → revoked (cliente cortó) / expired (30 min) / ended (admin salió)
+  status            text not null default 'pending',
+  reason            text,
+  duration_min      int not null default 30,   -- cuánto dura el acceso (lo elige el admin)
+  created_at        timestamptz not null default now(),
+  responded_at      timestamptz,
+  expires_at        timestamptz,   -- se setea al aceptar: responded_at + duration_min
+  ended_at          timestamptz
+);
+
+-- Idempotente para bases que ya crearon la tabla sin la columna.
+alter table public.support_access_requests add column if not exists duration_min int not null default 30;
+
+create index if not exists sar_client_idx on public.support_access_requests(client_profile_id, status, created_at desc);
+create index if not exists sar_admin_idx  on public.support_access_requests(admin_id, status, created_at desc);
+
+alter table public.support_access_requests enable row level security;
+
+-- Realtime necesita la fila completa para evaluar RLS y mandar el payload.
+alter table public.support_access_requests replica identity full;
+
+-- El admin crea la solicitud (y sólo a nombre propio).
+drop policy if exists "sar_insert_admin" on public.support_access_requests;
+create policy "sar_insert_admin" on public.support_access_requests
+  for insert with check (
+    admin_id = auth.uid()
+    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
+
+-- La ve el cliente dueño o cualquier admin.
+drop policy if exists "sar_select_own_or_admin" on public.support_access_requests;
+create policy "sar_select_own_or_admin" on public.support_access_requests
+  for select using (
+    client_profile_id = auth.uid()
+    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
+
+-- El cliente actualiza SÓLO las suyas (aceptar / rechazar / cortar).
+drop policy if exists "sar_update_client" on public.support_access_requests;
+create policy "sar_update_client" on public.support_access_requests
+  for update using (client_profile_id = auth.uid())
+  with check (client_profile_id = auth.uid());
+
+-- El admin actualiza (salir / expirar / cancelar la espera).
+drop policy if exists "sar_update_admin" on public.support_access_requests;
+create policy "sar_update_admin" on public.support_access_requests
+  for update using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
+
+grant select, insert, update, delete on public.support_access_requests to anon, authenticated;
+
+-- Sumar la tabla a la publicación de Realtime (idempotente).
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'support_access_requests'
+  ) then
+    alter publication supabase_realtime add table public.support_access_requests;
+  end if;
+end $$;
+
+-- =====================================================================
+-- 16) Acceso del admin a los datos del cliente (necesario para el modo
+--     soporte: ver y MODIFICAR el panel real del cliente).
+--     El consentimiento y la auditoría los maneja la app (support_access_requests);
+--     a nivel base, el admin tiene acceso completo a los datos de negocio.
+-- =====================================================================
+
+-- Helper: ¿el usuario actual es admin? (security definer para poder leer profiles)
+create or replace function public.is_current_user_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin);
+$$;
+
+grant execute on function public.is_current_user_admin() to authenticated;
+
+-- Una política "for all" por tabla: se SUMA (OR) a las políticas del cliente,
+-- así el cliente sigue viendo sólo lo suyo y el admin ve/edita todo.
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'business_profiles', 'agent_configs', 'products', 'services',
+    'appointments', 'customers', 'payments', 'bank_accounts'
+  ]
+  loop
+    execute format('drop policy if exists %I on public.%I', t || '_admin_all', t);
+    execute format(
+      'create policy %I on public.%I for all using (public.is_current_user_admin()) with check (public.is_current_user_admin())',
+      t || '_admin_all', t
+    );
+  end loop;
+end $$;
+
+-- Storage: el admin puede leer/subir/actualizar/borrar archivos de cualquier
+-- cliente en los buckets del negocio (fotos de productos, logos, etc.).
+drop policy if exists "buckets_admin_all" on storage.objects;
+create policy "buckets_admin_all" on storage.objects
+  for all using (
+    bucket_id in ('logos', 'productos', 'remitos', 'servicios', 'soporte')
+    and public.is_current_user_admin()
+  ) with check (
+    bucket_id in ('logos', 'productos', 'remitos', 'servicios', 'soporte')
+    and public.is_current_user_admin()
+  );

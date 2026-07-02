@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
+import { useEffectiveUserId } from '../context/AuthContext'
 
 export interface Service {
   id: string
@@ -31,8 +31,7 @@ export interface ServiceInput {
  * La seguridad real la garantiza RLS (cada cliente sólo ve y toca lo suyo).
  */
 export function useServices() {
-  const { session } = useAuth()
-  const userId = session?.user?.id
+  const userId = useEffectiveUserId()
 
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)

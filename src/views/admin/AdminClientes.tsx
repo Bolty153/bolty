@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { Client, Plan } from './types'
 import { statusLabel, fmtDate, logActivity } from './utils'
+import { useAdminSupportAccess, isActiveNow } from '../../hooks/useSupportAccess'
 
 interface Props {
   onImpersonate: (client: Client) => void
+  access: ReturnType<typeof useAdminSupportAccess>
 }
 
 // Client + is_active leído de profiles (la fuente real de verdad del acceso)
@@ -18,7 +20,7 @@ const EMPTY_FORM = {
   plan_id: '', status: 'inactive' as Client['status'], paid_until: '', trial_ends_at: '', notes: '',
 }
 
-export default function AdminClientes({ onImpersonate }: Props) {
+export default function AdminClientes({ onImpersonate, access }: Props) {
   const [clients, setClients]       = useState<ClientRow[]>([])
   const [plans, setPlans]           = useState<Plan[]>([])
   const [loading, setLoading]       = useState(true)
@@ -37,6 +39,10 @@ export default function AdminClientes({ onImpersonate }: Props) {
   const [showPass, setShowPass]     = useState(false)
   const [createdInfo, setCreatedInfo] = useState<{ name: string; password: string } | null>(null)
   const [copied, setCopied]         = useState(false)
+  // Modal para pedir acceso al panel de un cliente (con duración y motivo)
+  const [accessModal, setAccessModal] = useState<ClientRow | null>(null)
+  const [accessReason, setAccessReason] = useState('')
+  const [accessMinutes, setAccessMinutes] = useState(30)
 
   async function load() {
     const [{ data: cl }, { data: pl }] = await Promise.all([
@@ -236,6 +242,61 @@ export default function AdminClientes({ onImpersonate }: Props) {
     })
     setFormErr(''); setMsg('')
     setEditClient(c)
+  }
+
+  // ─── Acceso al panel del cliente con permiso (modo soporte) ────────────────
+  function askAccess(c: ClientRow) {
+    setAccessReason('')
+    setAccessMinutes(30)
+    setAccessModal(c)
+  }
+
+  function confirmAccess() {
+    if (!accessModal) return
+    const mins = Math.max(1, Math.min(240, Math.round(accessMinutes) || 30))
+    access.requestAccess(accessModal.id, accessReason.trim() || undefined, mins)
+    logActivity('request_support_access', accessModal.id, 'client', { email: accessModal.email, minutes: mins })
+    setAccessModal(null)
+  }
+
+  function renderAccessBtn(c: ClientRow) {
+    const req = access.byClient[c.id]
+
+    // Ya aceptado y vigente → puede entrar (reutiliza el mecanismo de impersonation).
+    if (isActiveNow(req)) {
+      return (
+        <button className="abtn primary" title="Entrar al panel del cliente"
+          onClick={() => { onImpersonate(c); logActivity('enter_support_access', c.id, 'client') }}
+          style={{ background: 'var(--mint)', borderColor: 'var(--mint)', boxShadow: 'none' }}>
+          Entrar al panel
+        </button>
+      )
+    }
+
+    // Esperando que el cliente confirme.
+    if (req?.status === 'pending') {
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: 'var(--amber)', fontWeight: 600, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+            <span className="pulse-dot" style={{ background: 'var(--amber)' }} />
+            Esperando confirmación…
+          </span>
+          <button className="abtn" title="Cancelar solicitud" onClick={() => access.endAccess(req.id)}>Cancelar</button>
+        </span>
+      )
+    }
+
+    // Rechazado / cortado / expirado / sin pedido → pedir (de nuevo).
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        {req?.status === 'denied' && (
+          <span style={{ fontSize: 12, color: 'var(--rose)', fontWeight: 600, whiteSpace: 'nowrap' }}>Rechazó</span>
+        )}
+        <button className="abtn" title="Pedir permiso para entrar al panel" onClick={() => askAccess(c)}>
+          {req && req.status !== 'denied' ? 'Solicitar de nuevo' : 'Solicitar acceso'}
+        </button>
+      </span>
+    )
   }
 
   // ─── Modal de crear/editar ────────────────────────────────────────────────
@@ -458,7 +519,7 @@ export default function AdminClientes({ onImpersonate }: Props) {
                             </button>
                           )}
                           <button className="abtn" title="Resetear contraseña" onClick={() => resetPassword(c)}>🔑</button>
-                          <button className="abtn" title="Ver como cliente" onClick={() => onImpersonate(c)}>👁</button>
+                          {renderAccessBtn(c)}
                         </div>
                       </td>
                     </tr>
@@ -472,6 +533,48 @@ export default function AdminClientes({ onImpersonate }: Props) {
 
       {showCreate && modalForm(false)}
       {editClient && modalForm(true)}
+
+      {accessModal && (
+        <div className="modal-ov" onClick={e => { if (e.target === e.currentTarget) setAccessModal(null) }}>
+          <div className="modal-box" style={{ maxWidth: 440 }}>
+            <h2>Solicitar acceso al panel</h2>
+            <p style={{ fontSize: 13.5, color: 'var(--ink-soft)', lineHeight: 1.6, margin: '-8px 0 18px' }}>
+              Le pedís permiso a <b>{accessModal.business_name || accessModal.email}</b> para entrar a su panel.
+              Sólo entrás cuando lo acepta, y podés modificar como si fueras el cliente.
+            </p>
+
+            <div className="field">
+              <label>¿Cuánto tiempo necesitás?</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                {[15, 30, 60, 120].map(m => (
+                  <button key={m} type="button"
+                    className={`abtn${accessMinutes === m ? ' primary' : ''}`}
+                    onClick={() => setAccessMinutes(m)}>
+                    {m < 60 ? `${m} min` : `${m / 60} h`}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="number" min={1} max={240} value={accessMinutes}
+                  onChange={e => setAccessMinutes(Number(e.target.value))}
+                  style={{ width: 90 }} />
+                <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>minutos (máx. 240)</span>
+              </div>
+            </div>
+
+            <div className="field">
+              <label>Motivo (opcional, lo ve el cliente)</label>
+              <textarea value={accessReason} onChange={e => setAccessReason(e.target.value)}
+                rows={2} placeholder="Ej: Revisar un problema con el inventario" style={{ resize: 'vertical' }} />
+            </div>
+
+            <div className="modal-actions">
+              <button className="abtn" onClick={() => setAccessModal(null)}>Cancelar</button>
+              <button className="abtn primary" onClick={confirmAccess}>Enviar solicitud</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {createdInfo && (
         <div className="modal-ov" onClick={() => setCreatedInfo(null)}>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
+import { useEffectiveUserId } from '../context/AuthContext'
 
 export type TicketType = 'falla' | 'sugerencia' | 'medida'
 
@@ -26,8 +26,7 @@ export interface TicketInput {
 
 /** Cliente: envía reportes de falla, sugerencias y pedidos a medida. */
 export function useSupport() {
-  const { session } = useAuth()
-  const userId = session?.user?.id
+  const userId = useEffectiveUserId()
 
   const submit = useCallback(async (input: TicketInput, businessName: string, phone: string) => {
     if (!userId) throw new Error('No hay sesión activa')

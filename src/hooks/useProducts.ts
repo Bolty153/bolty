@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
+import { useEffectiveUserId } from '../context/AuthContext'
 
 // Umbral para considerar un producto con "stock bajo" (configurable a futuro).
 export const LOW_STOCK_THRESHOLD = 5
@@ -34,8 +34,7 @@ export interface ProductInput {
  * la garantiza RLS (cada cliente sólo ve y toca SUS productos).
  */
 export function useProducts() {
-  const { session } = useAuth()
-  const userId = session?.user?.id
+  const userId = useEffectiveUserId()
 
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)

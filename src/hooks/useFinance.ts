@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
+import { useEffectiveUserId } from '../context/AuthContext'
 
 export type PayKind = 'servicio' | 'producto' | 'manual'
 export type PayMethod = 'efectivo' | 'transferencia'
@@ -44,8 +44,7 @@ export interface PaymentInput {
  * ventas manuales), todos en una sola tabla. RLS: cada cliente ve sólo lo suyo.
  */
 export function useFinance() {
-  const { session } = useAuth()
-  const userId = session?.user?.id
+  const userId = useEffectiveUserId()
 
   const [payments, setPayments] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)

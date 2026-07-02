@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
+import { useEffectiveUserId } from '../context/AuthContext'
 
 export interface PlanRequest {
   id: string
@@ -24,11 +24,10 @@ export function planKeyFromName(name?: string | null): string | null {
 
 /** Cliente: lee su plan actual real desde la tabla clients/plans. */
 export function useCurrentPlan() {
-  const { session } = useAuth()
+  const uid = useEffectiveUserId()
   const [planKey, setPlanKey] = useState<string | null>(null)
 
   useEffect(() => {
-    const uid = session?.user?.id
     if (!uid) return
     supabase
       .from('clients')
@@ -40,25 +39,25 @@ export function useCurrentPlan() {
         const name = (data as { plan?: { name?: string } | null } | null)?.plan?.name ?? null
         setPlanKey(planKeyFromName(name))
       })
-  }, [session])
+  }, [uid])
 
   return planKey
 }
 
 /** Cliente: registra un pedido de cambio de plan. */
 export function usePlanRequests() {
-  const { session } = useAuth()
+  const userId = useEffectiveUserId()
 
   const requestChange = useCallback(async (plan: string, businessName: string, currentPlan: string) => {
-    if (!session) throw new Error('No hay sesión activa')
+    if (!userId) throw new Error('No hay sesión activa')
     const { error } = await supabase.from('plan_requests').insert({
-      user_id: session.user.id,
+      user_id: userId,
       business_name: businessName || null,
       current_plan: currentPlan || null,
       requested_plan: plan,
     })
     if (error) throw error
-  }, [session])
+  }, [userId])
 
   return { requestChange }
 }

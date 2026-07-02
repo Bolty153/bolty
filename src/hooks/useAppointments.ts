@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
+import { useEffectiveUserId } from '../context/AuthContext'
 
 export interface Appointment {
   id: string
@@ -38,8 +38,7 @@ export interface AppointmentInput {
  * (cada cliente sólo ve y toca SUS turnos).
  */
 export function useAppointments() {
-  const { session } = useAuth()
-  const userId = session?.user?.id
+  const userId = useEffectiveUserId()
 
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)

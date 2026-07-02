@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
+import { useEffectiveUserId } from '../context/AuthContext'
 
 export interface Customer {
   id: string
@@ -17,8 +17,7 @@ export interface Customer {
  * (y a futuro, desde una sección Clientes). RLS: cada negocio ve sólo los suyos.
  */
 export function useCustomers() {
-  const { session } = useAuth()
-  const userId = session?.user?.id
+  const userId = useEffectiveUserId()
 
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)

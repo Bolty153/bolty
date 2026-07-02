@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useAdminSupportAccess, isActiveNow } from '../../hooks/useSupportAccess'
 import AdminInicio from './AdminInicio'
 import AdminClientes from './AdminClientes'
 import AdminDinero from './AdminDinero'
@@ -7,65 +8,99 @@ import AdminMetricas from './AdminMetricas'
 import AdminControl from './AdminControl'
 import AdminSoporte from './AdminSoporte'
 import type { Client } from './types'
-import { statusLabel, fmtDate, fmtMoney } from './utils'
 import { useAdminTickets } from '../../hooks/useSupport'
+import { Dashboard } from '../../App'
 
 type AdminView = 'inicio' | 'clientes' | 'dinero' | 'metricas' | 'control' | 'soporte'
 
 export default function Admin() {
-  const { signOut, session } = useAuth()
+  const { signOut, session, setImpersonatedUserId } = useAuth()
   const [view, setView] = useState<AdminView>('inicio')
   const [impersonating, setImpersonating] = useState<Client | null>(null)
+  const [, setTick] = useState(0)   // refresca el contador de tiempo del banner
   const email = session?.user?.email || ''
   const { tickets } = useAdminTickets()
   const pendingSupport = tickets.filter(t => t.status === 'pendiente').length
+  const access = useAdminSupportAccess()
+
+  // Solicitud vigente del cliente al que estamos entrando.
+  const activeReq = impersonating ? access.byClient[impersonating.id] : null
+
+  // Entrar al panel del cliente: fija el id efectivo (para que TODO el dashboard
+  // lea/escriba los datos del cliente) y guarda el cliente para el banner.
+  function enterImpersonation(client: Client) {
+    setImpersonatedUserId(client.id)
+    setImpersonating(client)
+  }
+
+  // Salir: cierra la solicitud (si sigue activa) y limpia el modo soporte.
+  function exitImpersonation() {
+    if (activeReq && isActiveNow(activeReq)) access.endAccess(activeReq.id)
+    setImpersonatedUserId(null)
+    setImpersonating(null)
+  }
+
+  // Si el cliente corta (revoked) o la solicitud deja de estar activa, sacamos
+  // al admin del panel al instante (llega por Realtime → access.byClient).
+  useEffect(() => {
+    if (!impersonating) return
+    const r = access.byClient[impersonating.id]
+    if (!r || !isActiveNow(r)) {
+      setImpersonatedUserId(null)
+      setImpersonating(null)
+      if (r && (r.status === 'revoked' || r.status === 'expired')) {
+        alert(r.status === 'revoked'
+          ? 'El cliente cortó el acceso de soporte.'
+          : 'El acceso de soporte expiró.')
+      }
+    }
+  }, [access.byClient, impersonating, setImpersonatedUserId])
+
+  // Al llegar a expires_at, cerramos el acceso automáticamente.
+  useEffect(() => {
+    if (!impersonating || !activeReq?.expires_at) return
+    const ms = new Date(activeReq.expires_at).getTime() - Date.now()
+    if (ms <= 0) { setImpersonatedUserId(null); setImpersonating(null); return }
+    const t = setTimeout(() => { setImpersonatedUserId(null); setImpersonating(null) }, ms)
+    return () => clearTimeout(t)
+  }, [impersonating, activeReq, setImpersonatedUserId])
+
+  // Contador visible del tiempo restante (tick cada segundo mientras hay acceso).
+  useEffect(() => {
+    if (!impersonating) return
+    const i = setInterval(() => setTick(t => t + 1), 1000)
+    return () => clearInterval(i)
+  }, [impersonating])
+
+  // Por las dudas: al desmontar el panel admin, limpiar el modo soporte.
+  useEffect(() => () => setImpersonatedUserId(null), [setImpersonatedUserId])
 
   if (impersonating) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <>
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 400,
           background: '#ff9500', color: '#fff', padding: '11px 24px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14,
           boxShadow: '0 2px 12px rgba(0,0,0,.15)',
         }}>
-          <span>Vista de soporte: <strong>{impersonating.business_name || impersonating.email}</strong></span>
-          <button onClick={() => setImpersonating(null)} style={{
+          <span>
+            Acceso autorizado: <strong>{impersonating.business_name || impersonating.email}</strong>
+            {activeReq?.expires_at && (
+              <span style={{ opacity: .9, fontWeight: 500 }}> · quedan {fmtRemaining(activeReq.expires_at)}</span>
+            )}
+          </span>
+          <button onClick={exitImpersonation} style={{
             background: 'rgba(0,0,0,.22)', border: 'none', color: '#fff',
             padding: '6px 16px', borderRadius: 8, cursor: 'pointer',
             fontWeight: 700, fontSize: 13, fontFamily: 'Space Grotesk',
           }}>✕ Salir</button>
         </div>
-        <div style={{ paddingTop: 60, padding: '72px 24px 40px', maxWidth: 680, margin: '0 auto' }}>
-          <div className="card">
-            <h2 style={{ fontSize: 22, marginBottom: 20 }}>{impersonating.business_name || impersonating.email}</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              {[
-                { l: 'Email', v: impersonating.email },
-                { l: 'WhatsApp', v: impersonating.whatsapp || '—' },
-                { l: 'Plan', v: impersonating.plan?.name || 'Sin plan' },
-                { l: 'Precio', v: impersonating.plan ? fmtMoney(impersonating.plan.price_ars) + '/mes' : '—' },
-                { l: 'Estado', v: statusLabel(impersonating.status) },
-                { l: 'Vence', v: fmtDate(impersonating.paid_until) },
-                { l: 'Cliente desde', v: fmtDate(impersonating.created_at) },
-                { l: 'Prueba hasta', v: fmtDate(impersonating.trial_ends_at) },
-              ].map(({ l, v }) => (
-                <div key={l}>
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--ink-faint)', marginBottom: 4 }}>{l}</div>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{v}</div>
-                </div>
-              ))}
-            </div>
-            {impersonating.notes && (
-              <div style={{ marginTop: 20, padding: '14px 16px', background: 'var(--surf-2)', borderRadius: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--ink-faint)', marginBottom: 6 }}>Notas internas</div>
-                <div style={{ fontSize: 13.5, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{impersonating.notes}</div>
-              </div>
-            )}
-          </div>
+        <div style={{ paddingTop: 46 }}>
+          <Dashboard />
         </div>
-      </div>
+      </>
     )
   }
 
@@ -110,7 +145,7 @@ export default function Admin() {
       <div className="adm-main">
         <div key={view} className="view-anim">
           {view === 'inicio'   && <AdminInicio onNavigate={v => setView(v as AdminView)} />}
-          {view === 'clientes' && <AdminClientes onImpersonate={setImpersonating} />}
+          {view === 'clientes' && <AdminClientes onImpersonate={enterImpersonation} access={access} />}
           {view === 'dinero'   && <AdminDinero />}
           {view === 'metricas' && <AdminMetricas />}
           {view === 'soporte'  && <AdminSoporte />}
@@ -119,6 +154,15 @@ export default function Admin() {
       </div>
     </div>
   )
+}
+
+// Tiempo restante del acceso, en MM:SS.
+function fmtRemaining(iso: string) {
+  const ms = new Date(iso).getTime() - Date.now()
+  if (ms <= 0) return '0:00'
+  const total = Math.floor(ms / 1000)
+  const m = Math.floor(total / 60), s = total % 60
+  return `${m}:${String(s).padStart(2, '0')}`
 }
 
 function IcHome()     { return <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="17" height="17"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg> }

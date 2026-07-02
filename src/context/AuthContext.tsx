@@ -13,6 +13,11 @@ interface AuthContextType {
   profile: Profile | null
   loading: boolean
   recovery: boolean
+  // Modo soporte: cuando el admin entra al panel de un cliente, guardamos acá
+  // el id del cliente. El resto de la app (datos, storage) usa effectiveUserId.
+  impersonatedUserId: string | null
+  effectiveUserId: string | undefined
+  setImpersonatedUserId: (id: string | null) => void
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
   clearRecovery: () => void
@@ -23,6 +28,9 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   recovery: false,
+  impersonatedUserId: null,
+  effectiveUserId: undefined,
+  setImpersonatedUserId: () => {},
   signOut: async () => {},
   refreshProfile: async () => {},
   clearRecovery: () => {},
@@ -55,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [recovery, setRecovery] = useState(HAS_RECOVERY_HASH)
+  const [impersonatedUserId, setImpersonatedUserId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -150,8 +159,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   function clearRecovery() { setRecovery(false) }
 
+  const effectiveUserId = impersonatedUserId ?? session?.user?.id
+
   return (
-    <AuthContext.Provider value={{ session, profile, loading, recovery, signOut, refreshProfile, clearRecovery }}>
+    <AuthContext.Provider value={{
+      session, profile, loading, recovery,
+      impersonatedUserId, effectiveUserId, setImpersonatedUserId,
+      signOut, refreshProfile, clearRecovery,
+    }}>
       {children}
     </AuthContext.Provider>
   )
@@ -159,4 +174,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   return useContext(AuthContext)
+}
+
+/**
+ * ID del usuario cuyos datos hay que leer/escribir: normalmente el logueado,
+ * pero si el admin está en modo soporte dentro de un cliente, es el del cliente.
+ * Todos los hooks de datos del cliente usan esto (no session.user.id directo).
+ */
+export function useEffectiveUserId() {
+  return useAuth().effectiveUserId
 }

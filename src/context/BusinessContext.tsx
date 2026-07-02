@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from './AuthContext'
+import { useEffectiveUserId } from './AuthContext'
 
 export interface DayHours {
   open: boolean
@@ -112,16 +112,15 @@ const BusinessContext = createContext<BusinessContextType>({
 })
 
 export function BusinessProvider({ children }: { children: ReactNode }) {
-  const { session } = useAuth()
+  // En modo soporte, effectiveUserId es el id del cliente que el admin está viendo.
+  const userId = useEffectiveUserId()
   const [business, setBusiness] = useState<BusinessProfile>(DEFAULT_BUSINESS)
   const [agent, setAgent] = useState<AgentConfig>(DEFAULT_AGENT)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  // Dependemos solo del user ID, no del objeto session entero.
-  // Cuando TOKEN_REFRESHED crea un nuevo objeto session (mismo usuario, distinto token),
-  // el user ID no cambia → load() no se re-ejecuta → no hay spinner innecesario.
-  const userId = session?.user?.id
+  // Dependemos solo del user ID: si cambia (login, o el admin entra/sale de un
+  // cliente en modo soporte) recargamos; un TOKEN_REFRESHED no lo cambia.
   useEffect(() => {
     if (!userId) return
     load()
@@ -130,7 +129,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   async function load() {
     setLoading(true)
     try {
-      const uid = session!.user.id
+      const uid = userId!
 
       const [bpRes, acRes] = await Promise.all([
         supabase.from('business_profiles').select('*').eq('user_id', uid).maybeSingle(),
@@ -158,9 +157,9 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   }
 
   const saveBusiness = useCallback(async (data: Partial<BusinessProfile>) => {
-    if (!session) throw new Error('No hay sesión activa')
+    if (!userId) throw new Error('No hay sesión activa')
     setSaving(true)
-    const uid = session.user.id
+    const uid = userId
     const updated = { ...business, ...data }
     try {
       // .select().single() nos devuelve la fila persistida: así confirmamos que
@@ -178,12 +177,12 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     } finally {
       setSaving(false)
     }
-  }, [business, session])
+  }, [business, userId])
 
   const saveAgent = useCallback(async (data: Partial<AgentConfig>) => {
-    if (!session) throw new Error('No hay sesión activa')
+    if (!userId) throw new Error('No hay sesión activa')
     setSaving(true)
-    const uid = session.user.id
+    const uid = userId
     const updated = { ...agent, ...data }
     try {
       const { data: row, error } = await supabase
@@ -199,15 +198,15 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     } finally {
       setSaving(false)
     }
-  }, [agent, session])
+  }, [agent, userId])
 
   const completeOnboarding = useCallback(async (
     businessData: Partial<BusinessProfile>,
     agentData: Partial<AgentConfig>,
   ) => {
-    if (!session) throw new Error('No hay sesión activa')
+    if (!userId) throw new Error('No hay sesión activa')
     setSaving(true)
-    const uid = session.user.id
+    const uid = userId
     const bpPayload = { ...business, ...businessData, onboarding_complete: true, user_id: uid }
     const acPayload = { ...agent, ...agentData, user_id: uid }
     try {
@@ -229,11 +228,11 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     } finally {
       setSaving(false)
     }
-  }, [business, agent, session])
+  }, [business, agent, userId])
 
   const uploadLogo = useCallback(async (file: File): Promise<string | null> => {
-    if (!session) return null
-    const uid = session.user.id
+    if (!userId) return null
+    const uid = userId
     const ext = file.name.split('.').pop() ?? 'jpg'
     const path = `${uid}/logo.${ext}`
     const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true })
@@ -243,7 +242,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     }
     const { data } = supabase.storage.from('logos').getPublicUrl(path)
     return data.publicUrl
-  }, [session])
+  }, [userId])
 
   return (
     <BusinessContext.Provider value={{ business, agent, loading, saving, saveBusiness, saveAgent, completeOnboarding, uploadLogo }}>

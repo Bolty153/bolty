@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useBusinessContext } from '../../context/BusinessContext'
+import { useSupportAccessCtx, fmtDurationText } from '../../context/SupportAccessContext'
 
 export default function TopNav() {
   const { session, signOut } = useAuth()
   const { business } = useBusinessContext()
+  const { pending, accept, deny } = useSupportAccessCtx()
   const [notifOpen, setNotifOpen] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
 
@@ -53,17 +55,33 @@ export default function TopNav() {
             <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.73 21a2 2 0 01-3.46 0" />
           </svg>
+          {pending && <span className="badge">1</span>}
 
           {notifOpen && (
             <div className="notif-panel" onClick={e => e.stopPropagation()}>
               <div className="notif-panel-head">Notificaciones</div>
-              <div className="notif-empty">
-                <svg fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" width="32" height="32">
-                  <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                  <path d="M13.73 21a2 2 0 01-3.46 0" />
-                </svg>
-                <p>Todavía no hay notificaciones</p>
-              </div>
+              {pending ? (
+                <div style={{ padding: '14px 16px' }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)', marginBottom: 4 }}>
+                    El soporte de Bolty quiere acceder a tu panel
+                  </div>
+                  <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', lineHeight: 1.5, marginBottom: 12 }}>
+                    {pending.reason || 'Pide permiso para entrar y ayudarte.'} Dura hasta {fmtDurationText(pending.duration_min)}.
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="abtn" onClick={() => { deny(pending.id); setNotifOpen(false) }}>Rechazar</button>
+                    <button className="abtn primary" onClick={() => { accept(pending.id); setNotifOpen(false) }}>Aceptar</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="notif-empty">
+                  <svg fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" width="32" height="32">
+                    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 01-3.46 0" />
+                  </svg>
+                  <p>Todavía no hay notificaciones</p>
+                </div>
+              )}
             </div>
           )}
         </div>

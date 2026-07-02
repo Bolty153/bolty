@@ -6,6 +6,8 @@ import { useSupport } from '../../hooks/useSupport'
 import type { TicketType } from '../../hooks/useSupport'
 import PlansModal from '../PlansModal'
 import SupportModal from '../support/SupportModal'
+import SupportAccessHistoryModal from '../support/SupportAccessHistoryModal'
+import { useSupportAccessCtx } from '../../context/SupportAccessContext'
 
 interface Props {
   activeView: ViewId
@@ -147,8 +149,10 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
   const { requestChange } = usePlanRequests()
   const { submit: submitTicket, uploadScreenshot } = useSupport()
   const currentPlan = useCurrentPlan() || ''
+  const { pending: accessPending } = useSupportAccessCtx()
   const [plansOpen, setPlansOpen] = useState(false)
   const [supportType, setSupportType] = useState<TicketType | null>(null)
+  const [accessHistoryOpen, setAccessHistoryOpen] = useState(false)
 
   const supportItems: { type: TicketType; label: string; icon: React.ReactNode }[] = [
     { type: 'falla', label: 'Reportar una falla', icon: (
@@ -199,6 +203,11 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
             {item.label}
           </button>
         ))}
+        <button className="nav-item support" onClick={() => setAccessHistoryOpen(true)}>
+          <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
+          Accesos de soporte
+          {accessPending && <span className="adm-nav-dot" />}
+        </button>
 
         <div className="upsell" style={{ marginTop: 14 }}>
           <h5>⚡ Subí a Pro+</h5>
@@ -224,6 +233,8 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
         onSubmit={input => submitTicket(input, business.business_name || '', business.phone || '')}
       />
     )}
+
+    {accessHistoryOpen && <SupportAccessHistoryModal onClose={() => setAccessHistoryOpen(false)} />}
     </>
   )
 }

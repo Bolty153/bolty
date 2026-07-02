@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { BusinessProvider, useBusinessContext, getBusinessFlags } from './context/BusinessContext'
+import { SupportAccessProvider } from './context/SupportAccessContext'
 import TopNav from './components/layout/TopNav'
 import Sidebar from './components/layout/Sidebar'
 import Inicio from './views/Inicio'
@@ -86,10 +87,12 @@ function DashboardContent() {
   )
 }
 
-function Dashboard() {
+export function Dashboard() {
   return (
     <BusinessProvider>
-      <DashboardContent />
+      <SupportAccessProvider>
+        <DashboardContent />
+      </SupportAccessProvider>
     </BusinessProvider>
   )
 }
