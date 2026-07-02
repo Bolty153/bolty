@@ -169,32 +169,33 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
   return (
     <>
     <aside className="side">
-      <div className="nav-label">Tu negocio</div>
-      {fullMainNav.map(item => (
-        <button
-          key={item.id}
-          className={`nav-item${activeView === item.id ? ' active' : ''}`}
-          onClick={() => onNavigate(item.id)}
-        >
-          {item.icon}
-          {item.label}
-        </button>
-      ))}
+      {/* Zona NAV: scrollea sola si no entran todos los ítems */}
+      <div className="side-nav">
+        <div className="nav-label">Tu negocio</div>
+        {fullMainNav.map(item => (
+          <button
+            key={item.id}
+            className={`nav-item${activeView === item.id ? ' active' : ''}`}
+            onClick={() => onNavigate(item.id)}
+          >
+            {item.icon}
+            {item.label}
+          </button>
+        ))}
 
-      <div className="nav-sep" />
-      <div className="nav-label">Servicios</div>
-      {servicesNav.map(item => (
-        <button
-          key={item.id}
-          className={`nav-item${activeView === item.id ? ' active' : ''}`}
-          onClick={() => onNavigate(item.id)}
-        >
-          {item.icon}
-          {item.label}
-        </button>
-      ))}
+        <div className="nav-sep" />
+        <div className="nav-label">Servicios</div>
+        {servicesNav.map(item => (
+          <button
+            key={item.id}
+            className={`nav-item${activeView === item.id ? ' active' : ''}`}
+            onClick={() => onNavigate(item.id)}
+          >
+            {item.icon}
+            {item.label}
+          </button>
+        ))}
 
-      <div className="side-foot">
         <div className="nav-sep" />
         <div className="nav-label">Soporte y ayuda</div>
         {supportItems.map(item => (
@@ -208,8 +209,11 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
           Accesos de soporte
           {accessPending && <span className="adm-nav-dot" />}
         </button>
+      </div>
 
-        <div className="upsell" style={{ marginTop: 14 }}>
+      {/* Zona FOOTER: siempre visible al pie, nunca cortada */}
+      <div className="side-foot">
+        <div className="upsell">
           <h5>⚡ Subí a Pro+</h5>
           <p>Sumá sucursales ilimitadas y conexión con tu sistema de stock.</p>
           <button onClick={() => setPlansOpen(true)}>Ver planes</button>
