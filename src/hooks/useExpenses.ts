@@ -85,11 +85,23 @@ export function useExpenses() {
     return data as Expense
   }, [userId])
 
+  const updateExpense = useCallback(async (id: string, input: ExpenseInput): Promise<Expense> => {
+    const { data, error } = await supabase
+      .from('expenses')
+      .update({ ...input })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    setExpenses(prev => prev.map(e => e.id === id ? (data as Expense) : e))
+    return data as Expense
+  }, [])
+
   const deleteExpense = useCallback(async (id: string): Promise<void> => {
     const { error } = await supabase.from('expenses').delete().eq('id', id)
     if (error) throw error
     setExpenses(prev => prev.filter(e => e.id !== id))
   }, [])
 
-  return { expenses, loading, error, reload: load, addExpense, deleteExpense }
+  return { expenses, loading, error, reload: load, addExpense, updateExpense, deleteExpense }
 }

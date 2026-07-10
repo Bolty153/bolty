@@ -1733,6 +1733,52 @@ h1,h2,h3,h4,h5,.disp {
   color: #ff8da8; font-size: 16px; cursor: pointer; flex-shrink: 0; transition: all .12s;
 }
 .fin-del:hover { background: var(--rose-wash); color: var(--rose); }
+.fin-edit {
+  width: 24px; height: 24px; border-radius: 6px; border: none; background: none;
+  color: var(--ink-faint); cursor: pointer; flex-shrink: 0; transition: all .12s;
+  display: flex; align-items: center; justify-content: center;
+}
+.fin-edit:hover { background: var(--volt-wash); color: var(--volt); }
+
+/* Medios de pago: cuentas bancarias y tarjetas */
+.pm-tabs-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pm-list { display: flex; flex-direction: column; margin-top: 12px; }
+.pm-row { display: flex; align-items: center; gap: 13px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.pm-row:last-child { border-bottom: none; }
+.pm-ic {
+  width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0; font-size: 17px;
+  display: flex; align-items: center; justify-content: center; background: var(--volt-wash);
+}
+.pm-main { flex: 1; min-width: 0; }
+.pm-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pm-name { font-size: 14px; font-weight: 700; }
+.pm-type-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: var(--surf-2); color: var(--ink-soft); }
+.pm-type-badge.credito { background: var(--volt-wash); color: var(--volt-ink); }
+.pm-meta { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+.pm-spent { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 12.5px; color: var(--rose); white-space: nowrap; text-align: right; line-height: 1.5; }
+.pm-spent-btn {
+  display: flex; align-items: center; gap: 6px; border: none; background: none; cursor: pointer;
+  padding: 4px 6px; border-radius: 8px; flex-shrink: 0; font-family: inherit; transition: background .12s;
+}
+.pm-spent-btn:hover { background: var(--surf-2); }
+.pm-chev { color: var(--ink-faint); flex-shrink: 0; transition: transform .15s; }
+.pm-chev.open { transform: rotate(180deg); }
+.pm-detail { padding: 2px 0 12px 51px; display: flex; flex-direction: column; gap: 7px; }
+.pm-detail-empty { font-size: 12.5px; color: var(--ink-faint); }
+.pm-detail-row { display: grid; grid-template-columns: 62px 1fr 140px 90px; gap: 10px; align-items: center; font-size: 12.5px; color: var(--ink-2); }
+.pm-detail-date { color: var(--ink-faint); }
+.pm-detail-desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pm-detail-cat { color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pm-detail-amt { font-family: 'Space Grotesk', sans-serif; font-weight: 700; text-align: right; color: var(--rose); }
+.pm-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.pm-actions button {
+  border: 1px solid var(--line); background: var(--surf); border-radius: 8px; padding: 6px 11px;
+  font-size: 12px; font-weight: 600; cursor: pointer; color: var(--ink-2); font-family: inherit;
+}
+.pm-actions button:hover { background: var(--surf-2); }
+.pm-actions button.danger:hover { background: var(--rose-wash); color: var(--rose); border-color: var(--rose); }
+.pm-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pm-alert-list { display: flex; flex-direction: column; gap: 8px; }
 
 /* Venta desde inventario (productos) */
 .sale-sec-title {

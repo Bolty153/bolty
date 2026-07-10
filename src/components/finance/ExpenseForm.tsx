@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import Combobox from '../Combobox'
 import AccountFields, { emptyAccount } from './AccountFields'
 import type { AccountState } from './AccountFields'
 import { fmtMoney } from '../../hooks/useFinance'
 import { EXPENSE_CATEGORIES } from '../../hooks/useExpenses'
-import type { ExpenseInput, ExpenseSource } from '../../hooks/useExpenses'
+import type { Expense, ExpenseInput, ExpenseSource } from '../../hooks/useExpenses'
 import type { BankAccount, BankAccountInput } from '../../hooks/useBankAccounts'
+import type { Card, CardKind } from '../../hooks/useCards'
 
 const todayKey = () => {
   const d = new Date()
@@ -12,24 +14,28 @@ const todayKey = () => {
 }
 
 const OTHER = '__otra__'
+const CARD_TYPE_LABEL: Record<CardKind, string> = { credito: 'Crédito', debito: 'Débito' }
 
 export default function ExpenseForm({
-  accounts, onSaveAccount, onClose, onSave,
+  accounts, onSaveAccount, cards, expense, onClose, onSave,
 }: {
   accounts: BankAccount[]
   onSaveAccount: (a: BankAccountInput) => Promise<void>
+  cards?: Card[]
+  expense?: Expense | null
   onClose: () => void
   onSave: (input: ExpenseInput) => Promise<void>
 }) {
-  const [amount, setAmount] = useState('')
-  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0])
-  const [customCat, setCustomCat] = useState('')
-  const [source, setSource] = useState<ExpenseSource>('efectivo')
-  const [account, setAccount] = useState<AccountState>(emptyAccount())
-  const [cardName, setCardName] = useState('')
-  const [supplier, setSupplier] = useState('')
-  const [description, setDescription] = useState('')
-  const [date, setDate] = useState(todayKey())
+  const isKnownCategory = !!expense && EXPENSE_CATEGORIES.includes(expense.category)
+  const [amount, setAmount] = useState(expense ? String(expense.amount) : '')
+  const [category, setCategory] = useState(expense ? (isKnownCategory ? expense.category : OTHER) : EXPENSE_CATEGORIES[0])
+  const [customCat, setCustomCat] = useState(expense && !isKnownCategory ? expense.category : '')
+  const [source, setSource] = useState<ExpenseSource>(expense?.source ?? 'efectivo')
+  const [account, setAccount] = useState<AccountState>(expense?.source === 'cuenta_bancaria' ? { ...emptyAccount(), name: expense.account ?? '' } : emptyAccount())
+  const [cardName, setCardName] = useState(expense?.source === 'tarjeta_empresa' ? (expense.account ?? '') : '')
+  const [supplier, setSupplier] = useState(expense?.supplier ?? '')
+  const [description, setDescription] = useState(expense?.description ?? '')
+  const [date, setDate] = useState(expense?.expense_date ?? todayKey())
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
@@ -68,7 +74,7 @@ export default function ExpenseForm({
   return (
     <div className="modal-ov" onClick={onClose}>
       <div className="modal-box" onClick={e => e.stopPropagation()}>
-        <h2>Registrar gasto</h2>
+        <h2>{expense ? 'Editar gasto' : 'Registrar gasto'}</h2>
 
         <div className="field">
           <label>Monto *</label>
@@ -102,7 +108,14 @@ export default function ExpenseForm({
         {source === 'tarjeta_empresa' && (
           <div className="field">
             <label>¿Con qué tarjeta?</label>
-            <input type="text" value={cardName} onChange={e => setCardName(e.target.value)} placeholder="Ej: Visa empresa, Amex…" />
+            <Combobox
+              value={cardName}
+              onChange={setCardName}
+              items={cards ?? []}
+              getLabel={c => c.name}
+              getSub={c => [c.bank, CARD_TYPE_LABEL[c.type]].filter(Boolean).join(' · ')}
+              placeholder="Elegí una guardada o escribí una nueva"
+            />
           </div>
         )}
 
@@ -130,7 +143,7 @@ export default function ExpenseForm({
 
         <div className="modal-actions">
           <button className="btn-outline" onClick={onClose} disabled={saving}>Cancelar</button>
-          <button className="btn" onClick={submit} disabled={saving}>{saving ? 'Guardando…' : 'Registrar gasto'}</button>
+          <button className="btn" onClick={submit} disabled={saving}>{saving ? 'Guardando…' : (expense ? 'Guardar cambios' : 'Registrar gasto')}</button>
         </div>
       </div>
     </div>

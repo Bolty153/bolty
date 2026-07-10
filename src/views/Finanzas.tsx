@@ -7,9 +7,11 @@ import type { Expense } from '../hooks/useExpenses'
 import { useProducts } from '../hooks/useProducts'
 import { useServices } from '../hooks/useServices'
 import { useBankAccounts } from '../hooks/useBankAccounts'
+import { useCards } from '../hooks/useCards'
 import PaymentForm from '../components/finance/PaymentForm'
 import SaleForm from '../components/finance/SaleForm'
 import ExpenseForm from '../components/finance/ExpenseForm'
+import PaymentMethods from '../components/finance/PaymentMethods'
 
 // Granularidad del selector de período.
 type Gran = 'dia' | 'mes' | 'anio' | 'todo'
@@ -36,14 +38,16 @@ const dayLongLabel = (key: string) => { const [y, m, d] = key.split('-'); return
 
 export default function Finanzas({ focus }: { focus?: ViewFocus }) {
   const { payments, loading, addPayment, deletePayment } = useFinance()
-  const { expenses, addExpense, deleteExpense } = useExpenses()
+  const { expenses, addExpense, updateExpense, deleteExpense } = useExpenses()
   const { products, bulkUpdateStock } = useProducts()
   const { services } = useServices()
-  const { accounts, addAccount } = useBankAccounts()
+  const { accounts, addAccount, updateAccount, deleteAccount } = useBankAccounts()
+  const { cards, addCard, updateCard, deleteCard } = useCards()
 
   const [payOpen, setPayOpen] = useState(false)
   const [saleOpen, setSaleOpen] = useState(false)
   const [expenseOpen, setExpenseOpen] = useState(false)
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [toDelete, setToDelete] = useState<DelTarget | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [finSearch, setFinSearch] = useState('')
@@ -278,7 +282,7 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
           </div>
         </div>
         <div className="inv-head-actions">
-          <button className="btn-outline" onClick={() => setExpenseOpen(true)}>− Registrar gasto</button>
+          <button className="btn-outline" onClick={() => { setEditingExpense(null); setExpenseOpen(true) }}>− Registrar gasto</button>
           <button className="btn-outline" onClick={() => setPayOpen(true)}>+ Registrar pago</button>
           <button className="btn" onClick={() => setSaleOpen(true)}>+ Registrar venta</button>
         </div>
@@ -419,6 +423,13 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
         )}
       </div>
 
+      {/* Medios de pago: cuentas bancarias y tarjetas */}
+      <PaymentMethods
+        accounts={accounts} addAccount={addAccount} updateAccount={updateAccount} deleteAccount={deleteAccount}
+        cards={cards} addCard={addCard} updateCard={updateCard} deleteCard={deleteCard}
+        rangeExpenses={rangeExpenses} periodLabel={periodLabel}
+      />
+
       {/* Movimientos: ingresos (+) y gastos (−) unidos */}
       <div className="card" style={{ marginTop: 18 }}>
         <div className="card-h" style={{ gap: 12, flexWrap: 'wrap' }}>
@@ -440,7 +451,7 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
             <div style={{ display: 'flex', gap: 10, marginTop: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
               <button className="btn" onClick={() => setSaleOpen(true)}>+ Registrar venta</button>
               <button className="btn-outline" onClick={() => setPayOpen(true)}>+ Registrar pago</button>
-              <button className="btn-outline" onClick={() => setExpenseOpen(true)}>− Registrar gasto</button>
+              <button className="btn-outline" onClick={() => { setEditingExpense(null); setExpenseOpen(true) }}>− Registrar gasto</button>
             </div>
           </div>
         ) : (
@@ -462,6 +473,14 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
                   <div className="fin-amount" style={{ color: isGasto ? 'var(--rose)' : 'var(--mint)' }}>
                     {isGasto ? '−' : '+'}{fmtMoney(m.amount)}
                   </div>
+                  {isGasto && (
+                    <button className="fin-edit" onClick={() => { const ex = expenses.find(e => e.id === m.id); if (ex) { setEditingExpense(ex); setExpenseOpen(true) } }} title="Editar gasto">
+                      <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="14" height="14">
+                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                    </button>
+                  )}
                   <button className="fin-del" onClick={() => setToDelete({ type: m.type, id: m.id, amount: m.amount, title: m.title })} title="Borrar movimiento">×</button>
                 </div>
               )
@@ -506,8 +525,14 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
         <ExpenseForm
           accounts={accounts}
           onSaveAccount={addAccount}
-          onClose={() => setExpenseOpen(false)}
-          onSave={async input => { await addExpense(input); setExpenseOpen(false) }}
+          cards={cards}
+          expense={editingExpense}
+          onClose={() => { setExpenseOpen(false); setEditingExpense(null) }}
+          onSave={async input => {
+            if (editingExpense) await updateExpense(editingExpense.id, input)
+            else await addExpense(input)
+            setExpenseOpen(false); setEditingExpense(null)
+          }}
         />
       )}
 
