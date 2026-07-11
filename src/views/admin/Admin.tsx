@@ -16,6 +16,7 @@ type AdminView = 'inicio' | 'clientes' | 'dinero' | 'metricas' | 'control' | 'so
 export default function Admin() {
   const { signOut, session, setImpersonatedUserId } = useAuth()
   const [view, setView] = useState<AdminView>('inicio')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [impersonating, setImpersonating] = useState<Client | null>(null)
   const [, setTick] = useState(0)   // refresca el contador de tiempo del banner
   const email = session?.user?.email || ''
@@ -104,9 +105,28 @@ export default function Admin() {
     )
   }
 
+  function go(id: AdminView) { setView(id); setSidebarOpen(false) }
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <div className="adm-side">
+      <div className="adm-mobile-topbar">
+        <button className="hamburger-btn" onClick={() => setSidebarOpen(v => !v)} title="Menú" aria-label="Abrir menú">
+          <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M3 6h18M3 12h18M3 18h18" />
+          </svg>
+        </button>
+        <div className="brand-logo" style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0 }}>
+          <svg viewBox="5 3 28 32" fill="none" style={{ width: 22, height: 22 }}>
+            <text x="7" y="32" fontFamily="'Space Grotesk',sans-serif" fontWeight="700" fontSize="38" fill="#fff">B</text>
+            <path d="M26 6 L17 21 H23 L20.5 33 L31 17 H25 L27.5 6 Z" fill="#00c896" />
+          </svg>
+        </div>
+        <span className="adm-mobile-topbar-title">Admin</span>
+      </div>
+
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+
+      <div className={`adm-side${sidebarOpen ? ' adm-side-open' : ''}`}>
         <div className="adm-brand">
           <div className="brand-logo" style={{ width: 36, height: 36, borderRadius: 9, flexShrink: 0 }}>
             <svg viewBox="5 3 28 32" fill="none" style={{ width: 26, height: 26 }}>
@@ -129,7 +149,7 @@ export default function Admin() {
             { id: 'soporte',  label: 'Soporte',   icon: <IcLife /> },
             { id: 'control',  label: 'Control',   icon: <IcSettings /> },
           ] as { id: AdminView; label: string; icon: React.ReactNode }[]).map(({ id, label, icon }) => (
-            <button key={id} onClick={() => setView(id)}
+            <button key={id} onClick={() => go(id)}
               className={`adm-nav-item${view === id ? ' active' : ''}`}>
               {icon}{label}
               {id === 'soporte' && pendingSupport > 0 && <span className="adm-nav-dot" />}

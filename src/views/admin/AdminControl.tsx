@@ -153,10 +153,10 @@ export default function AdminControl() {
             <tbody>
               {plans.map(p => (
                 <tr key={p.id}>
-                  <td style={{ fontWeight: 600 }}>{p.name}</td>
-                  <td>${p.price_ars.toLocaleString('es-AR')}</td>
-                  <td style={{ fontSize: 12, color: 'var(--ink-soft)' }}>{p.description || '—'}</td>
-                  <td>
+                  <td data-label="Nombre" style={{ fontWeight: 600 }}>{p.name}</td>
+                  <td data-label="Precio/mes">${p.price_ars.toLocaleString('es-AR')}</td>
+                  <td data-label="Descripción" style={{ fontSize: 12, color: 'var(--ink-soft)' }}>{p.description || '—'}</td>
+                  <td data-label="Acciones">
                     <div className="adm-actions">
                       <button className="abtn" onClick={() => openEditPlan(p)}>Editar</button>
                       <button className="abtn danger" onClick={() => deletePlan(p)}>Borrar</button>
@@ -194,7 +194,7 @@ export default function AdminControl() {
       {/* Trial mode */}
       <div className="adm-sect">
         <div className="adm-sect-h">Modo prueba gratis</div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div className="adm-flex-row" style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <div style={{ flex: 2, minWidth: 200 }}>
             <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 7 }}>Cliente</label>
             <select value={trialClient} onChange={e => setTrialClient(e.target.value)}
@@ -237,10 +237,10 @@ export default function AdminControl() {
             <tbody>
               {log.map(e => (
                 <tr key={e.id}>
-                  <td style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{new Date(e.created_at).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
-                  <td style={{ fontWeight: 600, fontSize: 13 }}>{e.action}</td>
-                  <td style={{ fontSize: 12 }}><span className="sbadge inactive">{e.target_type || '—'}</span></td>
-                  <td style={{ fontSize: 11.5, color: 'var(--ink-soft)', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <td data-label="Fecha" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{new Date(e.created_at).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                  <td data-label="Acción" style={{ fontWeight: 600, fontSize: 13 }}>{e.action}</td>
+                  <td data-label="Tipo" style={{ fontSize: 12 }}><span className="sbadge inactive">{e.target_type || '—'}</span></td>
+                  <td data-label="Detalles" style={{ fontSize: 11.5, color: 'var(--ink-soft)', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {e.details ? JSON.stringify(e.details) : '—'}
                   </td>
                 </tr>

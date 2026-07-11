@@ -376,6 +376,7 @@ h1,h2,h3,h4,h5,.disp {
 }
 
 /* ===== Admin Panel ===== */
+.adm-mobile-topbar { display: none; }
 .adm-side {
   width: 218px; min-height: 100vh; flex-shrink: 0;
   background: #13111c; display: flex; flex-direction: column;
@@ -1161,6 +1162,80 @@ h1,h2,h3,h4,h5,.disp {
   .lp-footer { padding: 44px 18px 26px; }
   .lp-footer-links { flex-direction: column; gap: 22px; }
   .lp-footer-col a, .lp-footer-col button { padding: 4px 0; margin-bottom: 4px; font-size: 14px; }
+}
+
+/* =====================================================================
+   PANEL ADMIN — responsive mobile (max-width: 768px)
+   Reutiliza los mismos patrones del dashboard del cliente: hamburguesa +
+   panel deslizante + overlay (.sidebar-overlay, .hamburger-btn ya existen),
+   modales full-width (.modal-box ya cubierto), inputs a 16px (regla
+   universal ya cubierta). Acá solo lo específico del admin: la topbar
+   mobile, el .adm-side como off-canvas, KPIs a 1 columna y las tablas
+   convertidas a tarjetas apiladas con label arriba de cada valor.
+   Nada de esto toca el desktop.
+   ===================================================================== */
+@media (max-width: 768px) {
+  /* --- Topbar mobile con hamburguesa (el admin no tenía una barra superior) --- */
+  .adm-mobile-topbar {
+    display: flex; align-items: center; gap: 10px;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 950; height: 62px;
+    background: #13111c; padding: 0 14px; box-shadow: 0 2px 12px rgba(0,0,0,.15);
+  }
+  .adm-mobile-topbar .hamburger-btn { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.12); color: #fff; }
+  .adm-mobile-topbar-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; color: #fff; }
+
+  /* --- Sidebar del admin: panel deslizante con overlay, igual que el del cliente
+     (la topbar mide 62px, igual que la TopNav del cliente, así que reutiliza
+     el mismo .sidebar-overlay con inset:62px sin pisarlo) --- */
+  .adm-side {
+    display: flex; position: fixed; top: 62px; left: 0; bottom: 0; z-index: 900;
+    width: 82vw; max-width: 300px; height: auto;
+    transform: translateX(-100%); transition: transform .28s cubic-bezier(.22,1,.36,1);
+  }
+  .adm-side.adm-side-open { transform: translateX(0); }
+
+  /* --- Contenido: aire para la topbar fija + márgenes más chicos --- */
+  .adm-main { padding: 78px 16px 40px; }
+
+  /* --- KPIs a 1 columna --- */
+  .adm-kpis { grid-template-columns: 1fr; }
+
+  /* --- Toolbar de clientes/soporte: apilada --- */
+  .adm-toolbar { flex-direction: column; align-items: stretch; }
+  .adm-search { min-width: 0; }
+  .adm-page-head .abtn { width: 100%; justify-content: center; }
+
+  /* --- Tablas → tarjetas apiladas, con el label arriba de cada valor --- */
+  .adm-table-wrap { overflow-x: visible; }
+  .adm-table, .adm-table thead, .adm-table tbody, .adm-table tr, .adm-table td { display: block; width: 100%; }
+  .adm-table thead { display: none; }
+  .adm-table tr {
+    border: 1px solid var(--line); border-radius: 13px; padding: 12px 14px; margin-bottom: 10px; background: var(--surf);
+  }
+  .adm-table tbody tr:last-child { margin-bottom: 0; }
+  .adm-table td { border-bottom: none; padding: 7px 0; }
+  .adm-table td::before {
+    content: attr(data-label); display: block; font-size: 10.5px; font-weight: 700;
+    color: var(--ink-faint); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px;
+  }
+  .adm-actions { width: 100%; }
+  .adm-actions .abtn { flex: 1; justify-content: center; padding: 9px 12px; }
+
+  /* --- Soporte: tarjeta apilada, botón de acción a ancho completo --- */
+  .sup-row { flex-wrap: wrap; }
+  .sup-main { flex-basis: 100%; }
+  .sup-actions { width: 100%; }
+  .sup-actions .abtn { width: 100%; justify-content: center; }
+
+  /* --- Métricas: que el nombre no empuje el ancho de la fila --- */
+  .rank-nm { min-width: 0; }
+
+  /* --- Contraseña generada: que no se corte contra el borde --- */
+  .pass-box { flex-wrap: wrap; }
+
+  /* --- Fila "Modo prueba gratis" (Control): apilada en vez de 3 columnas --- */
+  .adm-flex-row { flex-direction: column; align-items: stretch !important; }
+  .adm-flex-row > * { min-width: 0 !important; width: 100%; }
 }
 
 /* =====================================================================

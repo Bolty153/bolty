@@ -451,16 +451,16 @@ export default function AdminClientes({ onImpersonate, access }: Props) {
                   const isUpdating = updatingId === c.id
                   return (
                     <tr key={c.id}>
-                      <td>
+                      <td data-label="Negocio / Email">
                         <div style={{ fontWeight: 600, fontSize: 14 }}>{c.business_name || '—'}</div>
                         <div style={{ color: 'var(--ink-soft)', fontSize: 12 }}>{c.email}</div>
                       </td>
-                      <td style={{ fontSize: 13 }}>
+                      <td data-label="Plan" style={{ fontSize: 13 }}>
                         {c.plan?.name || <span style={{ color: 'var(--ink-faint)' }}>Sin plan</span>}
                       </td>
 
                       {/* ── Columna de acceso: el toggle principal ── */}
-                      <td>
+                      <td data-label="Acceso al dashboard">
                         <button
                           onClick={() => toggleAccess(c)}
                           disabled={isUpdating}
@@ -495,17 +495,17 @@ export default function AdminClientes({ onImpersonate, access }: Props) {
                         </button>
                       </td>
 
-                      <td>
+                      <td data-label="Estado">
                         <span className={`sbadge ${c.status}`}>{statusLabel(c.status)}</span>
                       </td>
-                      <td style={{
+                      <td data-label="Vence" style={{
                         fontSize: 13,
                         color: isPastDue(c) ? 'var(--rose)' : undefined,
                         fontWeight: isPastDue(c) ? 700 : undefined,
                       }}>
                         {fmtDate(c.paid_until)}
                       </td>
-                      <td>
+                      <td data-label="Más">
                         <div className="adm-actions">
                           <button className="abtn" title="Editar datos" onClick={() => openEdit(c)}>
                             <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="13" height="13">

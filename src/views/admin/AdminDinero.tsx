@@ -173,24 +173,24 @@ export default function AdminDinero() {
                 const expSoon = c.paid_until && !pastDue && (new Date(c.paid_until).getTime() - now.getTime()) / 86400000 <= 7
                 return (
                   <tr key={c.id}>
-                    <td>
+                    <td data-label="Cliente">
                       <div style={{ fontWeight: 600, fontSize: 14 }}>{c.business_name || '—'}</div>
                       <div style={{ color: 'var(--ink-soft)', fontSize: 12 }}>{c.email}</div>
                     </td>
-                    <td style={{ fontSize: 13 }}>{c.plan?.name || '—'}</td>
-                    <td>
+                    <td data-label="Plan" style={{ fontSize: 13 }}>{c.plan?.name || '—'}</td>
+                    <td data-label="Estado pago">
                       {pastDue ? <span className="sbadge suspended">Vencido</span>
                         : expSoon ? <span className="sbadge trial">Por vencer</span>
                         : c.paid_until ? <span className="sbadge active">Al día</span>
                         : <span className="sbadge inactive">Sin fecha</span>}
                     </td>
-                    <td style={{ fontSize: 13, color: pastDue ? 'var(--rose)' : undefined, fontWeight: pastDue ? 700 : undefined }}>
+                    <td data-label="Vence" style={{ fontSize: 13, color: pastDue ? 'var(--rose)' : undefined, fontWeight: pastDue ? 700 : undefined }}>
                       {fmtDate(c.paid_until)}
                     </td>
-                    <td style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
+                    <td data-label="Último pago" style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
                       {c.lastPayment ? `${fmtMoney(c.lastPayment.amount)} el ${fmtDate(c.lastPayment.paid_at)}` : '—'}
                     </td>
-                    <td>
+                    <td data-label="Acciones">
                       <div className="adm-actions">
                         <button className="abtn primary" style={{ fontSize: 12 }} onClick={() => openPayFor(c.id)}>Cobrar</button>
                         <button className="abtn" style={{ fontSize: 12 }} onClick={() => setHistClient(c.id)}>Historial</button>
@@ -263,11 +263,11 @@ export default function AdminDinero() {
                 <tbody>
                   {histPayments.map(p => (
                     <tr key={p.id}>
-                      <td style={{ fontSize: 13 }}>{fmtDate(p.paid_at)}</td>
-                      <td style={{ fontWeight: 700 }}>{fmtMoney(p.amount)}</td>
-                      <td style={{ fontSize: 13 }}>{p.method}</td>
-                      <td style={{ fontSize: 12 }}>{p.period_start ? `${fmtDate(p.period_start)} – ${fmtDate(p.period_end)}` : '—'}</td>
-                      <td style={{ fontSize: 12, color: 'var(--ink-soft)' }}>{p.note || '—'}</td>
+                      <td data-label="Fecha" style={{ fontSize: 13 }}>{fmtDate(p.paid_at)}</td>
+                      <td data-label="Monto" style={{ fontWeight: 700 }}>{fmtMoney(p.amount)}</td>
+                      <td data-label="Método" style={{ fontSize: 13 }}>{p.method}</td>
+                      <td data-label="Período" style={{ fontSize: 12 }}>{p.period_start ? `${fmtDate(p.period_start)} – ${fmtDate(p.period_end)}` : '—'}</td>
+                      <td data-label="Nota" style={{ fontSize: 12, color: 'var(--ink-soft)' }}>{p.note || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
