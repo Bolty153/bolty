@@ -435,7 +435,7 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
         <div className="card-h" style={{ gap: 12, flexWrap: 'wrap' }}>
           <h3>Movimientos</h3>
           {(payments.length > 0 || expenses.length > 0) && (
-            <input className="adm-search" style={{ maxWidth: 240, marginLeft: 'auto' }}
+            <input className="adm-search fin-search" style={{ maxWidth: 240, marginLeft: 'auto' }}
               placeholder="Buscar por detalle, categoría o cuenta…"
               value={finSearch} onChange={e => setFinSearch(e.target.value)} />
           )}

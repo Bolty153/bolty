@@ -429,7 +429,7 @@ function AppointmentForm({
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="field-row-2" style={{ display: 'grid', gap: 12 }}>
           <div className="field">
             <label>Fecha *</label>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} />
@@ -440,7 +440,7 @@ function AppointmentForm({
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="field-row-2" style={{ display: 'grid', gap: 12 }}>
           <div className="field">
             <label>Duración (min)</label>
             <input type="text" inputMode="numeric" value={duration} onChange={e => setDuration(e.target.value)} placeholder="Ej: 60" />

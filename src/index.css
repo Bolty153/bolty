@@ -45,6 +45,12 @@ h1,h2,h3,h4,h5,.disp {
   display: flex; align-items: center; padding: 0 22px; gap: 18px;
   position: sticky; top: 0; z-index: 50;
 }
+.hamburger-btn {
+  display: none; flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surf); cursor: pointer;
+  align-items: center; justify-content: center; color: var(--ink-soft);
+}
+.hamburger-btn svg { width: 20px; height: 20px; }
 .brand {
   display: flex; align-items: center; gap: 10px; flex-shrink: 0;
   padding-right: 20px; border-right: 1px solid var(--line); height: 100%;
@@ -79,6 +85,7 @@ h1,h2,h3,h4,h5,.disp {
 }
 .icon-btn:hover { background: var(--surf-2); color: var(--ink); }
 .icon-btn svg { width: 18px; height: 18px; }
+.mobile-search-btn { display: none; }
 .icon-btn .badge {
   position: absolute; top: -4px; right: -4px; min-width: 17px; height: 17px;
   border-radius: 9px; background: var(--rose); color: #fff; font-size: 10px; font-weight: 700;
@@ -95,6 +102,7 @@ h1,h2,h3,h4,h5,.disp {
   color: #fff; font-size: 12px; font-weight: 700; font-family: 'Space Grotesk';
   display: flex; align-items: center; justify-content: center;
 }
+.acct-av-mobile { display: none; overflow: hidden; }
 .acct-n { font-size: 13px; font-weight: 600; padding-right: 4px; }
 .acct-company {
   font-size: 13px; font-weight: 700; font-family: 'Space Grotesk', sans-serif;
@@ -315,6 +323,7 @@ h1,h2,h3,h4,h5,.disp {
   outline: none; border-color: var(--volt); background: var(--surf); box-shadow: 0 0 0 3px var(--volt-wash);
 }
 .field .hint { font-size: 12px; color: var(--ink-faint); margin-top: 6px; }
+.field-row-2 { grid-template-columns: 1fr 1fr; }
 .chips { display: flex; gap: 9px; flex-wrap: wrap; }
 .chip {
   padding: 10px 16px; border: 1px solid var(--line); border-radius: 24px;
@@ -1302,6 +1311,7 @@ h1,h2,h3,h4,h5,.disp {
 }
 .remito-del:hover:not(:disabled) { background: var(--rose-wash); color: var(--rose); border-color: var(--rose); }
 .remito-del:disabled { opacity: .35; cursor: not-allowed; }
+.remito-mlabel { display: none; }
 
 /* Scanner de código de barras */
 .scan-frame {
@@ -1908,6 +1918,146 @@ h1,h2,h3,h4,h5,.disp {
   .bolty-wrap { width: 88px; right: 16px; bottom: 16px; }
 }
 
+/* En mobile la mascota se oculta (el fallback de imagen muestra un recuadro con fondo) */
+@media (max-width: 768px) {
+  .bolty-wrap, .bolty-launcher, .bolty-flash, .bolty-welcome-bubble { display: none; }
+}
+
+/* =====================================================================
+   RESPONSIVE MOBILE (max-width: 768px) — Dashboard del cliente
+   Todo lo de acá es exclusivo de mobile: no toca ningún estilo de desktop.
+   ===================================================================== */
+@media (max-width: 768px) {
+  /* --- TopNav: hamburguesa visible, achicar brand --- */
+  .hamburger-btn { display: flex; }
+  .brand-txt .f { display: none; }
+  .brand { padding-right: 10px; gap: 8px; }
+  .brand-logo { width: 38px; height: 38px; border-radius: 11px; }
+  .brand-logo svg { width: 26px; height: 26px; }
+  .brand-txt .n { font-size: 18px; }
+  .topnav { padding: 0 14px; gap: 10px; }
+  .acct-company { display: none; }
+  .acct { padding: 6px 14px 6px 6px; margin-right: 2px; }
+  .acct-av-desktop { display: none; }
+  .acct-av-mobile { display: flex; }
+  .mobile-search-btn { display: flex; }
+  .gsearch { display: none; } /* el buscador inline de desktop no entra en mobile; se usa la barra propia */
+
+  /* --- Buscador: barra inline debajo de la TopNav, con dropdown como en desktop --- */
+  .mobile-search-bar {
+    position: fixed; top: 62px; left: 0; right: 0; z-index: 940;
+    background: var(--surf); border-bottom: 1px solid var(--line); box-shadow: var(--sh-m);
+    display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+    animation: fade .15s ease;
+  }
+  .mobile-search-bar .gsearch { display: block; }
+  .mobile-search-bar .topnav-search { display: flex; }
+  .mobile-search-close {
+    flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--surf); color: var(--ink-soft); font-size: 15px; cursor: pointer;
+  }
+
+  /* --- Notificaciones: panel contenido en el ancho de la pantalla --- */
+  .notif-panel { position: fixed; top: 66px; left: 12px; right: 12px; width: auto; }
+
+  /* --- Sidebar: panel deslizante con overlay --- */
+  .sidebar-overlay {
+    position: fixed; inset: 62px 0 0 0; background: rgba(19,17,28,.5);
+    z-index: 899; animation: fade .18s ease;
+  }
+  .side {
+    display: flex; position: fixed; top: 62px; left: 0; bottom: 0; z-index: 900;
+    width: 82vw; max-width: 320px; height: auto;
+    background: var(--surf); box-shadow: 0 12px 40px rgba(19,17,28,.25);
+    transform: translateX(-100%); transition: transform .28s cubic-bezier(.22,1,.36,1);
+  }
+  .side.side-open { transform: translateX(0); }
+
+  /* --- Main content: márgenes más chicos en teléfono --- */
+  .main { padding: 16px 14px 48px; }
+
+  /* --- Inicio: KPIs apilados en una columna --- */
+  .kpis { grid-template-columns: 1fr; }
+  .greet h1 { font-size: 19px; }
+  .agent-live { width: 100%; }
+  .page-head .greet { gap: 10px; }
+  .greet-av { width: 42px; height: 42px; font-size: 15px; }
+
+  /* --- Formularios de 2 columnas: apilados en mobile --- */
+  .field-row-2 { grid-template-columns: 1fr; }
+
+  /* --- Mi Negocio: horarios apilados por día --- */
+  .onb-logo-row { gap: 14px; }
+  .onb-day { flex-direction: column; gap: 10px; }
+  .onb-day-left { min-width: 0; padding-top: 0; }
+  .onb-shift-row input[type="time"] { width: 100px; }
+
+  /* --- Productos/Servicios: toolbar apilada, tarjetas de a una, botones más grandes --- */
+  .inv-head-actions { width: 100%; }
+  .inv-head-actions .btn, .inv-head-actions .btn-outline { flex: 1; min-width: 40%; justify-content: center; }
+  .inv-toolbar { flex-direction: column; align-items: stretch; }
+  .inv-search { min-width: 0; }
+  .inv-select { min-width: 0; width: 100%; }
+  .inv-toolbar-spacer { display: none; }
+  .inv-count { text-align: center; }
+  .prod-stepper button { width: 38px; height: 38px; }
+  .prod-actions button { padding: 11px; font-size: 13px; }
+  .quick-row { flex-wrap: wrap; }
+  .quick-stepper button { width: 40px; height: 40px; }
+
+  /* --- Modales y formularios: ancho completo, padding cómodo, botones grandes --- */
+  .modal-ov { padding: 0; align-items: flex-end; }
+  .modal-box {
+    width: 100%; max-width: none; border-radius: 20px 20px 0 0;
+    padding: 20px 16px 22px; max-height: 92vh;
+  }
+  .modal-actions { flex-direction: column-reverse; gap: 9px; }
+  .modal-actions button { width: 100%; padding: 14px; font-size: 14px; }
+
+  /* --- Agenda: un solo día a la vez, navegación y selector compactos --- */
+  .cal-nav { gap: 8px; }
+  .cal-range { min-width: 0; flex: 1; font-size: 13px; }
+  .cal-today { margin-left: 0; padding: 8px 12px; }
+  .cal-week { gap: 4px; }
+  .daycal-appt-del, .daycal-appt-pay { width: 26px; height: 26px; }
+  .daycal-appt-pay { right: 34px; }
+
+  /* --- Finanzas: gráficos apilados, movimientos como tarjetas --- */
+  .fin-period { gap: 8px; }
+  .fin-period-label { margin-left: 0; width: 100%; order: 3; }
+  .fin-method { flex-direction: column; align-items: center; text-align: center; }
+  .fin-legend { width: 100%; }
+  .fin-leg { justify-content: center; flex-wrap: wrap; }
+  .fin-search { max-width: 100% !important; margin-left: 0 !important; width: 100%; }
+  .fin-item {
+    flex-wrap: wrap; border: 1px solid var(--line); border-radius: 13px;
+    padding: 12px; margin-bottom: 10px;
+  }
+  .fin-item:last-child { margin-bottom: 0; }
+  .fin-item-desc { white-space: normal; }
+  .fin-item-main { flex-basis: 100%; order: 1; margin-top: 6px; }
+  .fin-amount { order: 2; margin-left: auto; }
+  .fin-edit, .fin-del { order: 3; }
+
+  /* --- Medios de pago: fila de cuenta/tarjeta se acomoda, detalle en tarjetas --- */
+  .pm-row { flex-wrap: wrap; }
+  .pm-main { flex-basis: 100%; order: 1; }
+  .pm-spent-btn { order: 2; }
+  .pm-actions { order: 3; margin-left: auto; }
+  .pm-detail { padding-left: 12px; }
+  .pm-detail-row {
+    grid-template-columns: 1fr auto; gap: 4px 10px;
+    grid-template-areas: "desc desc" "date amt" "cat cat";
+    border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px;
+  }
+  .pm-detail-date { grid-area: date; }
+  .pm-detail-desc { grid-area: desc; white-space: normal; font-weight: 600; color: var(--ink); }
+  .pm-detail-cat { grid-area: cat; }
+  .pm-detail-amt { grid-area: amt; }
+  .pm-2col { grid-template-columns: 1fr; }
+  .acc-grid { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 560px) {
   .tl-block { flex-wrap: wrap; }
   .tl-acts { width: 100%; }
@@ -1956,4 +2106,6 @@ h1,h2,h3,h4,h5,.disp {
   }
   .remito-row input:first-child { grid-column: 1 / -1; }
   .remito-del { position: absolute; top: 8px; right: 8px; }
+  .remito-field { display: flex; flex-direction: column; gap: 3px; }
+  .remito-mlabel { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .04em; }
 }

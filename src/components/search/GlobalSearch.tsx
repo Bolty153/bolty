@@ -9,6 +9,7 @@ export interface NavFocus { term?: string; date?: string }
 interface Props {
   onNavigate: (view: ViewId, focus?: NavFocus) => void
   onOpenCustomer: (c: Customer) => void
+  autoFocus?: boolean
 }
 
 type GroupKey = 'productos' | 'servicios' | 'clientes' | 'turnos' | 'pagos'
@@ -39,7 +40,7 @@ function hl(text: string, term: string): ReactNode {
 // Una fila plana de la lista (para poder navegar con el teclado por todo el dropdown).
 interface Flat { group: GroupKey; kind: 'item' | 'all'; action: () => void; content: ReactNode }
 
-export default function GlobalSearch({ onNavigate, onOpenCustomer }: Props) {
+export default function GlobalSearch({ onNavigate, onOpenCustomer, autoFocus }: Props) {
   const [term, setTerm] = useState('')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
@@ -149,6 +150,7 @@ export default function GlobalSearch({ onNavigate, onOpenCustomer }: Props) {
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
           placeholder="Buscar productos, servicios, clientes, turnos, pagos…"
+          autoFocus={autoFocus}
         />
         {term && (
           <button className="gs-clear" onClick={() => { setTerm(''); setActive(0) }} title="Limpiar" aria-label="Limpiar">✕</button>

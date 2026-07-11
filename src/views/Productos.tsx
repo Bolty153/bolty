@@ -410,7 +410,7 @@ function ProductForm({
           <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Ej: Alimento Premium 15kg" autoFocus />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="field-row-2" style={{ display: 'grid', gap: 14 }}>
           <div className="field">
             <label>Precio *</label>
             <input type="text" inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} placeholder="Ej: 18500" />

@@ -50,6 +50,7 @@ function DashboardContent() {
   const [view, setView] = useState<ViewId>('inicio')
   const [focus, setFocus] = useState<ViewFocus | null>(null)
   const [ficha, setFicha] = useState<Customer | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const { business, agent, loading } = useBusinessContext()
 
   // Navegación con foco opcional. Sin foco (ej. click en el sidebar) limpia el
@@ -57,6 +58,7 @@ function DashboardContent() {
   function navigateTo(v: ViewId, f?: NavFocus) {
     setFocus(f ? { ...f, ts: Date.now() } : null)
     setView(v)
+    setSidebarOpen(false)
   }
 
   if (loading) {
@@ -85,7 +87,7 @@ function DashboardContent() {
 
   return (
     <>
-      <TopNav onNavigate={navigateTo} onOpenCustomer={setFicha} />
+      <TopNav onNavigate={navigateTo} onOpenCustomer={setFicha} onMenuToggle={() => setSidebarOpen(v => !v)} />
       <div className="shell">
         <Sidebar
           activeView={safeView}
@@ -93,6 +95,8 @@ function DashboardContent() {
           showProductos={showProductos}
           showServicios={showServicios}
           showAgenda={showAgenda}
+          mobileOpen={sidebarOpen}
+          onMobileClose={() => setSidebarOpen(false)}
         />
         <main className="main">
           <div key={safeView} className="view-anim">

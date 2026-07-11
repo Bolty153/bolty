@@ -15,6 +15,8 @@ interface Props {
   showProductos: boolean
   showServicios: boolean
   showAgenda: boolean
+  mobileOpen: boolean
+  onMobileClose: () => void
 }
 
 interface NavItemDef {
@@ -134,7 +136,7 @@ const canalesNav: NavItemDef = {
   ),
 }
 
-export default function Sidebar({ activeView, onNavigate, showProductos, showServicios, showAgenda }: Props) {
+export default function Sidebar({ activeView, onNavigate, showProductos, showServicios, showAgenda, mobileOpen, onMobileClose }: Props) {
   // Inicio y Mi negocio siempre; luego Productos/Servicios según el tipo de negocio.
   const catalogNav: NavItemDef[] = [
     ...(showProductos ? [productosNav] : []),
@@ -168,7 +170,8 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
 
   return (
     <>
-    <aside className="side">
+    {mobileOpen && <div className="sidebar-overlay" onClick={onMobileClose} />}
+    <aside className={`side${mobileOpen ? ' side-open' : ''}`}>
       {/* Zona NAV: scrollea sola si no entran todos los ítems */}
       <div className="side-nav">
         <div className="nav-label">Tu negocio</div>
@@ -199,12 +202,12 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
         <div className="nav-sep" />
         <div className="nav-label">Soporte y ayuda</div>
         {supportItems.map(item => (
-          <button key={item.type} className="nav-item support" onClick={() => setSupportType(item.type)}>
+          <button key={item.type} className="nav-item support" onClick={() => { setSupportType(item.type); onMobileClose() }}>
             {item.icon}
             {item.label}
           </button>
         ))}
-        <button className="nav-item support" onClick={() => setAccessHistoryOpen(true)}>
+        <button className="nav-item support" onClick={() => { setAccessHistoryOpen(true); onMobileClose() }}>
           <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
           Accesos de soporte
           {accessPending && <span className="adm-nav-dot" />}
@@ -216,7 +219,7 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
         <div className="upsell">
           <h5>⚡ Subí a Pro+</h5>
           <p>Sumá sucursales ilimitadas y conexión con tu sistema de stock.</p>
-          <button onClick={() => setPlansOpen(true)}>Ver planes</button>
+          <button onClick={() => { setPlansOpen(true); onMobileClose() }}>Ver planes</button>
         </div>
       </div>
     </aside>

@@ -130,8 +130,8 @@ export default function RemitoModal({ onClose, onConfirm, uploadRemito }: Props)
               {rows.map((r, i) => (
                 <div key={i} className="remito-row">
                   <input value={r.name} onChange={e => setRow(i, { name: e.target.value })} placeholder="Producto" />
-                  <input value={r.price} inputMode="decimal" onChange={e => setRow(i, { price: e.target.value })} placeholder="0" />
-                  <input value={r.stock} inputMode="numeric" onChange={e => setRow(i, { stock: e.target.value })} placeholder="0" />
+                  <div className="remito-field"><span className="remito-mlabel">Precio</span><input value={r.price} inputMode="decimal" onChange={e => setRow(i, { price: e.target.value })} placeholder="0" /></div>
+                  <div className="remito-field"><span className="remito-mlabel">Stock</span><input value={r.stock} inputMode="numeric" onChange={e => setRow(i, { stock: e.target.value })} placeholder="0" /></div>
                   <input value={r.category} onChange={e => setRow(i, { category: e.target.value })} placeholder="Opcional" />
                   <button className="remito-del" onClick={() => removeRow(i)} title="Quitar fila" disabled={rows.length === 1}>×</button>
                 </div>

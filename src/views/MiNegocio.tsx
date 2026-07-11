@@ -150,7 +150,7 @@ export default function MiNegocio({ onNavigate }: Props) {
             placeholder="Breve descripción de tu negocio"
           />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="field-row-2" style={{ display: 'grid', gap: 14 }}>
           <div className="field">
             <label>Dirección o zona</label>
             <input
