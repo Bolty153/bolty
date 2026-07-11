@@ -1125,6 +1125,45 @@ h1,h2,h3,h4,h5,.disp {
 }
 
 /* =====================================================================
+   LANDING — ajustes adicionales de mobile (max-width: 768px)
+   Complementa los bloques de 900px/760px de arriba, que ya dejan las
+   grillas en 1 columna. Acá van los retoques que faltaban: botones a
+   ancho completo, banner de prueba gratis apilado, FAQ que no se corte
+   al abrirse en una pantalla angosta, y footer más cómodo de leer.
+   Nada de esto toca el desktop.
+   ===================================================================== */
+@media (max-width: 768px) {
+  .lp-wrap { padding: 0 18px; }
+
+  /* Hero: subtítulo un poco más chico y CTAs a ancho completo (más cómodos con el pulgar) */
+  .landing-hero-inner p { font-size: 15.5px; margin-top: 18px; }
+  .landing-cta { flex-direction: column; align-items: stretch; gap: 10px; margin-top: 28px; }
+  .landing-btn-primary, .landing-btn-ghost { width: 100%; padding: 15px 24px; }
+  .landing-scroll-hint { margin-top: 34px; }
+
+  /* Mockup de chat: un poco más compacto */
+  .lp-chat-mock { padding: 16px; border-radius: 20px; }
+
+  /* Banner de prueba gratis: apilado, botón a ancho completo */
+  .lp-trial-banner { flex-direction: column; align-items: stretch; text-align: center; padding: 20px 22px; }
+  .lp-trial-banner .t { margin-bottom: 4px; }
+  .lp-trial-banner button { width: 100%; }
+
+  /* Tira de métricas de reportes: 2 por fila en vez de apretarlas en una sola línea */
+  .lp-report-strip { gap: 10px; }
+  .lp-report-pill { flex: 1 1 calc(50% - 5px); min-width: 0; padding: 12px 14px; }
+
+  /* FAQ: más alto el máximo para que la respuesta no se corte al envolver en más líneas */
+  .lp-faq-item.open .lp-faq-a { max-height: 480px; }
+  .lp-faq-q { padding: 17px 18px; font-size: 14px; }
+
+  /* Footer: columnas apiladas una debajo de otra, links con más aire para tocar */
+  .lp-footer { padding: 44px 18px 26px; }
+  .lp-footer-links { flex-direction: column; gap: 22px; }
+  .lp-footer-col a, .lp-footer-col button { padding: 4px 0; margin-bottom: 4px; font-size: 14px; }
+}
+
+/* =====================================================================
    INVENTARIO / PRODUCTOS
    ===================================================================== */
 .btn-outline {
