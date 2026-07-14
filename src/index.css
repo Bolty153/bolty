@@ -752,6 +752,24 @@ h1,h2,h3,h4,h5,.disp {
 .lp-plan.featured .lp-plan-btn { background: var(--volt); color: #fff; border-color: var(--volt); box-shadow: var(--sh-volt); }
 .lp-plan-btn:hover { transform: translateY(-1px); }
 
+/* ── Escalera de 4 planes ── */
+.lp-plans-4 { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.lp-plans-4 .lp-plan { padding: 30px 22px; }
+.lp-plans-4 .lp-plan .price { font-size: 34px; margin: 12px 0 2px; }
+.lp-plan-unlock {
+  display: flex; gap: 8px; align-items: flex-start; margin-bottom: 18px;
+  font-size: 12px; line-height: 1.4; color: var(--volt);
+  background: var(--volt-wash, rgba(96,41,255,.07)); border: 1px solid rgba(96,41,255,.18);
+  border-radius: 10px; padding: 9px 11px;
+}
+.lp-plan-unlock svg { color: var(--volt); flex-shrink: 0; margin-top: 1px; width: 16px; height: 16px; }
+.lp-plan-axes { display: flex; flex-direction: column; gap: 13px; margin-bottom: 24px; flex: 1; }
+.lp-plan-axes li { display: flex; gap: 10px; align-items: flex-start; }
+.lp-plan-axes li svg { color: var(--volt); flex-shrink: 0; margin-top: 1px; opacity: .85; }
+.lp-plan-ax { display: flex; flex-direction: column; gap: 1px; }
+.lp-plan-ax-k { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-faint); }
+.lp-plan-ax-v { font-size: 13px; color: var(--ink-2); line-height: 1.35; }
+
 /* ── FAQ ── */
 .lp-faq { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
 .lp-faq-item { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surf); }
@@ -2022,8 +2040,10 @@ h1,h2,h3,h4,h5,.disp {
 
 /* ===== Planes ===== */
 .plans-box { max-width: 880px; }
+.plans-box:has(.plans-grid-4) { max-width: 1060px; }
 .plans-sub { font-size: 13.5px; color: var(--ink-soft); margin-bottom: 20px; }
 .plans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.plans-grid-4 { grid-template-columns: repeat(4, 1fr); }
 .plan-card {
   position: relative; border: 1px solid var(--line); border-radius: 16px; padding: 22px 18px;
   display: flex; flex-direction: column; background: var(--surf); transition: all .15s;
@@ -2039,6 +2059,11 @@ h1,h2,h3,h4,h5,.disp {
 .plan-name { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 6px; }
 .plan-price { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; color: var(--ink); margin-bottom: 16px; }
 .plan-price span { font-size: 13px; font-weight: 500; color: var(--ink-faint); }
+.plan-price-ask { font-size: 20px; font-weight: 700; color: var(--ink-soft); }
+.plan-unlock {
+  font-size: 11.5px; line-height: 1.35; color: var(--volt); background: var(--volt-wash, rgba(96,41,255,.07));
+  border: 1px solid rgba(96,41,255,.18); border-radius: 9px; padding: 7px 9px; margin-bottom: 14px; font-weight: 600;
+}
 .plan-feats { list-style: none; display: flex; flex-direction: column; gap: 9px; margin-bottom: 18px; flex: 1; }
 .plan-feats li { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--ink-2); line-height: 1.4; }
 .plan-feats li svg { color: var(--mint); flex-shrink: 0; margin-top: 2px; }
@@ -2057,8 +2082,14 @@ h1,h2,h3,h4,h5,.disp {
 .req-date { color: var(--ink-faint); font-size: 12px; }
 .req-actions { display: flex; gap: 8px; }
 
-@media (max-width: 700px) {
-  .plans-grid { grid-template-columns: 1fr; }
+@media (max-width: 980px) {
+  .plans-grid-4 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 768px) {
+  /* Mobile: tarjetas apiladas a 1 columna (patrón del dashboard). Cada tarjeta
+     mantiene su lista completa de features + la tira "Al subir", así la
+     comparación se sigue entendiendo de un vistazo. */
+  .plans-grid, .plans-grid-4 { grid-template-columns: 1fr; }
 }
 
 /* Distintivo de turno cobrado */

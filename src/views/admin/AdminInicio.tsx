@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { Client, Plan } from './types'
 import { fmtDate, fmtMoney } from './utils'
-import { useAdminPlanRequests, planKeyFromName } from '../../hooks/usePlanRequests'
+import { useAdminPlanRequests } from '../../hooks/usePlanRequests'
 import type { PlanRequest } from '../../hooks/usePlanRequests'
-import { PLAN_NAMES } from '../../components/PlansModal'
+import { PLAN_NAMES, planKeyFromName } from '../../lib/plans'
 
 interface Props {
   onNavigate: (view: string) => void

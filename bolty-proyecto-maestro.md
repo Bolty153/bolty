@@ -3,34 +3,37 @@
 **Business Online Live Technology For You**
 *"Tecnología en vivo online, para tu negocio."*
 
-> Documento maestro único. Reemplaza a los dos anteriores (`bolty-proyecto-maestro.md` viejo del 22/06 y `bolty-resumen-maestro.md` del 30/06-11/07), fusionados y verificados contra el código real y el historial de commits.
+> **Fuente de verdad ÚNICA.** Fusiona y reemplaza a `bolty-proyecto-maestro.md` (que se venía manteniendo) y a `bolty-resumen-maestro.md` (que traía la TANDA 2). Verificado contra el **código real** y el historial de commits.
 >
 > **Cómo usar este archivo:** al abrir un chat nuevo, subilo o pegalo y escribí *"Seguimos con Bolty. Acá está todo el proyecto. Leé y seguimos donde quedamos."*
 >
-> Última actualización: **11/07/2026** (responsive mobile completo: dashboard, landing y panel admin)
+> Última actualización: **14/07/2026** — TANDA 2 (escalera de planes, contador de tokens, doble visibilidad del consumo, regla de oro del límite) + verificación del código (Agenda con empleados, rentabilidad por empleado, pagos pendientes de confirmación, medios de pago, buscador global ampliado, responsive completo).
 
 ---
 
 ## 0. Cómo trabajamos (instrucciones para Claude)
 
-- El usuario es **no técnico**. Hay que guiarlo paso a paso, en **español argentino (voseo)**, explicando cualquier término técnico en simple, y celebrando los avances.
-- **Honestidad ante todo:** el usuario valora la verdad y que las cosas se hagan **bien y completas, no a medias** (salvo que él mismo pida lo contrario). No ofrecerle conformarse con menos.
+- El usuario es **no técnico**. Hay que guiarlo paso a paso, en **español argentino (voseo)**, explicando cualquier término técnico en simple, y celebrando los avances (lo motiva).
+- **Flujo de trabajo:** el usuario cuenta ideas → se construye en Claude Code (app de Claude → botón "Code" → modo Local + carpeta bolty) → el usuario prueba en el navegador y manda fotos.
+- **Honestidad ante todo:** el usuario valora la verdad y que las cosas se hagan **bien y completas, no a medias** (textual: *"ACÁ SE HACEN LAS COSAS BIEN, NO A MEDIAS, A MENOS QUE YO LO DIGA"*). No ofrecerle conformarse con menos.
+- Claude **lleva la hoja de ruta maestra** y le recuerda los pendientes (el usuario lo pidió explícito: *"vos tenés que acordarte y recordarme"*).
 - **Seguridad:** nunca pegar contraseñas/claves en el chat. Frenar y avisar antes de cualquier acción destructiva (borrar, publicar, enviar) o antes de subir a GitHub — **no se sube solo, hay que pedirlo explícitamente**.
 - Cuando se termina un bloque grande de trabajo y se sube a GitHub, conviene abrir una **sesión nueva** (rinde mejor, arranca liviana).
-- Trabaja directo en la carpeta `C:\Users\W10-PC\Desktop\bolty` con Claude Code / la app de Claude. Server de desarrollo: `npm run dev` → `localhost:5173` (a veces cambia de puerto si el 5173 está ocupado).
+- Server de desarrollo: `npm run dev` → `localhost:5173` (a veces cambia de puerto si el 5173 está ocupado).
+- **Cambios de base de datos:** cuando una función guarda algo nuevo, hay que **correr el SQL en Supabase** (SQL Editor → Run) una vez. El código en GitHub/Vercel no crea las tablas solo.
 
 ---
 
 ## 1. Qué es Bolty
 
-Bolty (**B**usiness **O**nline **L**ive **T**echnology For **Y**ou) es una plataforma web **SaaS multi-tenant**: cualquier comercio o empresa arma, en minutos, su propio **empleado virtual con IA** que atiende a sus clientes por WhatsApp, Instagram y chat web (y a futuro mail).
+Bolty (**B**usiness **O**nline **L**ive **T**echnology For **Y**ou) es una plataforma web **SaaS multi-tenant**. Empezó como "un empleado virtual con IA que atiende por WhatsApp", pero hoy **es más que eso: es un sistema de gestión con IA adentro** (inventario, agenda con empleados y disponibilidad real, finanzas con gastos y tarjetas, rentabilidad por empleado, búsqueda global, pagos pendientes) al que se le suma un agente que atiende clientes por WhatsApp, Instagram, chat web y mail. Ese cambio de posicionamiento importa para los precios (ver sección 4.1).
 
 El agente, cuando esté conectado al cerebro de IA (ver sección 6):
 - Responde con **IA real** (no respuestas fijas/guionadas), entrenado con los datos del negocio propio, como si le explicaran el trabajo a un empleado nuevo.
 - Consulta el **stock en tiempo real**.
-- **Agenda turnos** para negocios de servicios.
+- **Agenda turnos** para negocios de servicios (sabiendo qué empleado hace qué servicio y a qué hora está libre).
 - Responde en **varios idiomas**.
-- (A futuro) entiende audios y lee fotos de productos.
+- (A futuro) entiende audios y lee fotos de productos y comprobantes.
 
 **Mercado:** Argentina (pymes, comercios y empresas con sucursales). Cobro en pesos.
 
@@ -46,15 +49,16 @@ El agente, cuando esté conectado al cerebro de IA (ver sección 6):
 - **Logo:** letra **B** con un rayo verde menta integrado.
 - **Tipografía:** Space Grotesk (títulos) + Inter (texto).
 - **Colores:** violeta `#6029FF`, verde menta `#00C896`, tinta `#13111c`, fondo claro `#f7f6fb`.
-- **Mascota Bolty:** robot con cerebro dividido violeta + verde menta, auriculares, rayo en el pecho, manitos abiertas. Animada como **video WebM con fondo transparente** (`public/bolty-animado.webm`), con imagen de respaldo/poster (`public/bolty-mascota.png`, esa sí con fondo — ver nota abajo). Aparece con destello y bienvenida al entrar (una vez por sesión), después flota en la esquina inferior derecha con glow y reacciona al pasar el mouse. Visible en todo el dashboard y en la landing (solo esquina, sin bienvenida). **No aparece en mobile** (ver sección 3.6).
-  - **Nota técnica (11/07):** el PNG de respaldo tiene fondo real (no transparente) — en desktop no se nota porque casi siempre se ve el video; en mobile, donde el video con canal alfa no siempre se reproduce bien, se decidió directamente **ocultar la mascota** en vez de arreglar el PNG (más simple y sin riesgo).
+- **Mascota Bolty:** robot con cerebro dividido violeta + verde menta, auriculares, rayo en el pecho, manitos abiertas. Imagen original generada con ChatGPT; animada como **video WebM con fondo transparente** (`public/bolty-animado.webm`), con imagen de respaldo/poster (`public/bolty-mascota.png`, esa sí con fondo — ver nota). Aparece con destello y bienvenida al entrar (una vez por sesión), después flota en la esquina inferior derecha con glow y reacciona al pasar el mouse. Visible en todo el dashboard y en la landing (solo esquina, sin bienvenida). **No aparece en mobile.**
+  - **Nota técnica:** el PNG de respaldo tiene fondo real (no transparente) — en desktop no se nota porque casi siempre se ve el video; en mobile, donde el video con canal alfa no siempre se reproduce bien, se decidió directamente **ocultar la mascota** en vez de arreglar el PNG (más simple y sin riesgo).
+  - **Pendiente:** que al tocar a Bolty se abra un **asistente virtual** dentro del panel (depende del cerebro/IA).
 
 ---
 
-## 3. Lo que YA está construido (verificado contra el código, 11/07/2026)
+## 3. Lo que YA está construido (verificado contra el código, 14/07/2026)
 
 ### 3.1 Público / acceso
-- **Landing de marketing** (`Landing.tsx`, pública): 11 secciones — hero, el problema, la solución, cómo funciona, funciones destacadas, para quién es, por qué Bolty, planes (precios en "—" todavía), FAQ, CTA, footer. Animaciones al scroll. Mascota en la esquina (oculta en mobile). **Responsive mobile completo** (ver 3.4).
+- **Landing de marketing** (`Landing.tsx`, pública): 11 secciones — hero, el problema, la solución, cómo funciona, funciones destacadas, para quién es, por qué Bolty, planes (precios en "—" todavía), FAQ, CTA, footer. Animaciones al scroll. Mascota en la esquina (oculta en mobile). **Responsive mobile completo.**
 - **Login + control de acceso manual:** registro/login con email y contraseña (Supabase Auth). El acceso lo activa manualmente el administrador. Pantalla de "acceso no activo" si no fue habilitado. Recuperación de contraseña por email. Ojito para mostrar/ocultar contraseña.
 - **Contraseña provisoria al crear cliente:** el admin genera o escribe una clave temporal; el cliente queda obligado a cambiarla en su primer ingreso (columna `must_change_password` en `profiles`, pantalla `ForcePasswordChange.tsx`).
 
@@ -63,75 +67,129 @@ El agente, cuando esté conectado al cerebro de IA (ver sección 6):
 - **Dinero / Métricas / Control:** secciones de seguimiento del negocio Bolty (KPIs, gráficos, export CSV, log de actividad).
 - **Pedidos de cambio de plan:** el admin ve los pedidos de los clientes y aprueba el cambio real de plan.
 - **Soporte:** bandeja con pestañas (fallas / sugerencias / servicio a medida), estado pendiente/resuelto, teléfono del cliente, aviso (puntito) en el menú cuando hay pendientes.
-- **Modo soporte con permiso:** el admin pide acceso al panel de un cliente, el cliente lo autoriza desde una notificación real (no falsa) en su TopNav, queda un permiso de única vez con expiración (30 min), banner en vivo mientras el admin está adentro con botón de cortar, e historial de accesos (`support_access_requests`, `SupportAccessHistoryModal.tsx`).
-- **Responsive mobile completo** (ver 3.4) — antes el sidebar (`.adm-side`) desaparecía a los 900px sin reemplazo; ya tiene hamburguesa + panel deslizante igual que el dashboard del cliente.
+- **Modo soporte con permiso:** el admin pide acceso al panel de un cliente, el cliente lo autoriza desde una notificación real (no falsa) en su TopNav, queda un permiso de única vez con expiración (30 min), banner en vivo mientras el admin está adentro con botón de cortar, e historial de accesos (`support_access_requests`, `SupportAccessHistoryModal.tsx`). Es la primera tabla del proyecto con **Supabase Realtime**.
+- **Responsive mobile completo** — hamburguesa + panel deslizante + topbar mobile propia (el panel admin no tenía barra superior).
 
 ### 3.3 Dashboard del cliente (el negocio)
 - **Onboarding** en 3 pasos (negocio → horarios → agente), persiste en Supabase (`onboarding_complete`); no se repite al volver a entrar.
-- **Inicio:** KPIs (vacíos hasta tener actividad real), "Primeros pasos", horarios, aviso de stock bajo, saludo dinámico según la hora local (Buenos días/tardes/noches).
+- **Inicio:** KPIs (vacíos hasta tener actividad real), "Primeros pasos", horarios, aviso de stock bajo, **saludo dinámico según la hora local** (Buenos días/tardes/noches), logo grande en la TopNav.
 - **Mi negocio:** nombre, rubro, descripción, dirección, teléfono, logo (Storage), horarios con turno cortado (2 turnos/día + "aplicar a todos los días").
-- **Mi agente:** nombre del agente, tono (formal/cercano/divertido/con modismos), tipo de negocio (solo productos / solo servicios / ambos) — define qué secciones ve el dashboard (Inventario, Servicios, Agenda). Todo persiste en `agent_configs`, pero **todavía no controla ningún comportamiento real de IA** (no hay cerebro conectado aún).
-- **Funciones:** pantalla de toggles (núcleo siempre activas, destacada "lista de espera", y una lista activable) — es una **maqueta de configuración**, persiste en `localStorage` del navegador (no en Supabase) y **no está conectada a ningún agente real todavía**. Sirve para mostrar/decidir qué se va a poder prender o apagar el día que exista el cerebro.
-- **Reportes:** pantalla armada con 3 tarjetas ("¿Qué pregunta la gente?", "Lo más consultado", "Tu parte") — hoy son **estados vacíos** ("todavía no hay datos"), esperando que el cerebro genere datos reales.
-- **Canales:** pantalla con WhatsApp / Instagram / Chat en tu web listados como **"Sin conectar"** — es la UI ya armada, pero ninguna conexión real todavía (eso depende de la API de Meta / embedded signup, ver sección 6).
-- **Inventario (Productos):** alta/edición/borrado, foto, búsqueda, filtro por categoría, stock rápido (+/−), código de barras + lector con cámara, importar Excel/CSV (con plantilla), carga desde remito (pantalla lista para IA, con tabla editable a mano hoy), carga rápida, aviso de stock bajo, ajuste masivo. **No tiene precio de costo/margen** todavía (el balance de Finanzas es ingresos − gastos, no margen real).
+- **Mi agente:** nombre del agente, tono (formal/cercano/divertido/con modismos), tipo de negocio (solo productos / solo servicios / ambos) — define qué secciones ve el dashboard (Inventario, Servicios, Agenda, Equipo). Todo persiste en `agent_configs`, pero **todavía no controla ningún comportamiento real de IA** (no hay cerebro conectado aún).
+- **Funciones:** pantalla de toggles — es una **maqueta de configuración**, persiste en `localStorage` (no en Supabase) y **no está conectada a ningún agente real todavía**.
+- **Reportes:** 3 tarjetas ("¿Qué pregunta la gente?", "Lo más consultado", "Tu parte") — hoy son **estados vacíos**, esperando que el cerebro genere datos reales.
+- **Canales:** WhatsApp, Instagram, **Mail** y Chat en tu web listados como **"Sin conectar"** — UI armada, ninguna conexión real todavía. (El Mail ya figura como canal al mismo nivel que los otros; ver 6.4.)
+- **Inventario (Productos):** alta/edición/borrado, foto, búsqueda, filtro por categoría, stock rápido (+/−), código de barras + lector con cámara, importar Excel/CSV (con plantilla), carga desde remito (pantalla lista para IA, editable a mano hoy), carga rápida, aviso de stock bajo, ajuste masivo. **No tiene precio de costo/margen** todavía.
 - **Servicios:** para negocios de servicios (sin stock): precio fijo o "a consultar", duración (horas + minutos), categoría, foto, importar Excel/CSV.
-- **Agenda y turnos:** calendario navegable por semana con vista de un día (turnos ubicados por hora y a escala de su duración), alta/edición/cancelación con modal, memoria de clientes (autocompleta teléfono), registrar pago desde el turno (marca "Cobrado"). **Hoy asume 1 turno por horario** — no tiene capacidad múltiple ni empleados/recursos (ver pendiente clave en sección 6).
-- **Finanzas:** registrar pago de servicio (con cliente), venta de productos (desde inventario con descuento de stock, o manual), registrar gastos (con origen de fondos: efectivo / cuenta bancaria / tarjeta de la empresa), forma de pago efectivo/transferencia/**tarjeta** (débito o crédito), descuento/recargo en $ o %, selector de período (día/mes/año/todo), KPIs de ingresos/gastos/balance, gráficos por forma de pago y por cuenta, gastos por categoría, lista de movimientos con búsqueda.
-- **Medios de pago (zona propia en Finanzas):** subsecciones "Cuentas bancarias" (nombre/banco/CBU/alias/titular, se reutilizan al cobrar) y **"Tarjetas"** (nombre, banco, débito/crédito, día de cierre/vencimiento si es crédito), con gasto acumulado por tarjeta en el período y **aviso pasivo** si una tarjeta de crédito cierra o vence pronto.
-- **Buscador global (Spotlight)** en la TopNav: dropdown en vivo sobre 5 entidades (productos, servicios, clientes, turnos, pagos), agrupado, navegable por teclado, insensible a acentos, con **ficha de cliente completa** al abrir un resultado de cliente (datos + turnos + pagos cruzados, `CustomerFicha.tsx`). *Precisión sobre el "foco fino":* al elegir un resultado de producto/servicio/pago hoy se navega a esa sección con el **término precargado en el buscador de la sección** (no se abre el modal exacto del ítem); al elegir un turno, salta directo a **la fecha** del turno en la Agenda; al elegir un cliente, sí se abre la ficha completa. O sea: parcialmente resuelto, no 100% "abre el ítem exacto" en todos los casos.
-- **Soporte y ayuda** (grupo aparte del menú): reportar falla (con captura), enviar sugerencia, servicio a medida ("pedir presupuesto"), historial de accesos de soporte.
-- **Ver planes / pedir cambio de plan:** modal con los 3 planes, marca el plan actual real, permite pedir el cambio (queda registrado y le llega al admin).
-- **Sidebar:** header fijo, nav con scroll propio, footer (upsell "Subí a Pro+") siempre visible sin desbordar.
+- **Agenda y turnos:** calendario navegable por semana con vista de un día (turnos ubicados por hora y a escala de su duración), alta/edición/cancelación con modal, memoria de clientes (autocompleta teléfono), registrar pago desde el turno. **Ya soporta capacidad múltiple y empleados con disponibilidad real** (ver 3.7). El estado de pago del turno se sincroniza con Finanzas (ver 3.9).
+- **Equipo (empleados):** cargar personas del equipo (nombre, color, activo/inactivo), qué servicios hace cada una (`employee_services`), y **rentabilidad por empleado** (ver 3.8).
+- **Finanzas:** registrar pago de servicio (con cliente), venta de productos (desde inventario con descuento de stock, o manual), registrar gastos (con origen de fondos: efectivo / cuenta bancaria / tarjeta de la empresa), forma de pago efectivo/transferencia/**tarjeta** (débito o crédito), descuento/recargo en $ o %, selector de período (día/mes/año/todo), KPIs de ingresos/gastos/balance, gráficos por forma de pago y por cuenta, gastos por categoría, lista de movimientos con búsqueda. **Pagos pendientes de confirmación** (ver 3.9).
+- **Medios de pago (zona propia en Finanzas):** subsecciones "Cuentas bancarias" (nombre/banco/CBU/alias/titular, se reutilizan al cobrar) y **"Tarjetas"** (`cards`: nombre, banco, débito/crédito, día de cierre/vencimiento si es crédito), con gasto acumulado por tarjeta en el período y **aviso pasivo** dentro de la app si una tarjeta de crédito cierra o vence pronto.
+- **Buscador global (Spotlight)** en la TopNav: dropdown en vivo sobre **6 entidades** (productos, servicios, clientes, turnos, pagos y **empleados**), agrupado, navegable por teclado, insensible a acentos (RPC `global_search` con `unaccent`), con **ficha de cliente completa** al abrir un resultado de cliente (datos + turnos + pagos cruzados, `CustomerFicha.tsx`). *Foco fino parcial:* al elegir producto/servicio/pago navega a la sección con el **término precargado** (no abre el modal exacto); al elegir un turno salta a **la fecha** en la Agenda; al elegir un cliente sí abre la ficha completa. (Ajuste fino pendiente en 6.6.)
+- **Soporte y ayuda** (grupo aparte del menú): reportar falla (con captura), enviar sugerencia, servicio a medida, historial de accesos de soporte.
+- **Ver planes / pedir cambio de plan:** modal con los planes, marca el plan actual real, permite pedir el cambio (queda registrado y le llega al admin).
+- **Sidebar:** header fijo, nav con scroll propio, footer (upsell) siempre visible sin desbordar.
 
-### 3.4 Responsive mobile — COMPLETO: dashboard, landing y panel admin (hecho 11/07)
-Las tres superficies de Bolty (dashboard del cliente, landing pública y panel admin) ya son responsive. Todo el trabajo está dentro de `@media (max-width: 768px)` o en clases nuevas ocultas por defecto — **cero cambios en desktop**, verificado en las tres comparando valores computados a 375px vs 1440px (sidebar, grillas, tablas, overflow, todo vuelve exacto a como estaba).
+### 3.4 Responsive mobile — COMPLETO en las tres superficies
+Dashboard del cliente, landing pública y panel admin ya son responsive. Todo dentro de `@media (max-width: 768px)` o en clases nuevas ocultas por defecto — **cero cambios en desktop**, verificado comparando valores computados a 375px vs 1440px.
 
-**Patrones reutilizados en las tres partes:**
-- **Sidebar/menú → hamburguesa** con panel deslizante + overlay oscuro; se cierra al elegir sección o tocar afuera. El panel admin no tenía barra superior, así que se le agregó una topbar mobile nueva (oculta en desktop) solo para alojar el botón.
-- **Tablas y listas anchas → tarjetas apiladas**, con el nombre del campo como label arriba de cada valor (en el panel admin, las tablas reales usan `data-label` + `content: attr()` en CSS para mostrar el label sin tocar la tabla semántica de desktop).
-- **KPIs → 1 columna.** **Gráficos → apilados verticalmente**, sin desborde.
+**Patrones reutilizados:**
+- **Sidebar/menú → hamburguesa** con panel deslizante + overlay; se cierra al elegir sección o tocar afuera. El panel admin tiene una topbar mobile propia (oculta en desktop) solo para el botón.
+- **Tablas y listas anchas → tarjetas apiladas** (en el admin, `data-label` + `content: attr()` en CSS, sin tocar la tabla semántica de desktop).
+- **KPIs → 1 columna. Gráficos → apilados verticalmente**, sin desborde.
 - **Modales y formularios → ancho completo**, padding cómodo, botones grandes.
-- **Buscador global (dashboard cliente)** → barra inline debajo de la TopNav (no pantalla completa) con dropdown igual que en desktop, adaptado al ancho del celular.
-- **Agenda** → ya mostraba un solo día con selector de fecha; se ajustaron espaciados y áreas táctiles (no hizo falta rehacerla).
+- **Buscador global** → barra inline debajo de la TopNav con dropdown adaptado al ancho del celular.
+- **Agenda** → vista de un día con selector de fecha; se ajustaron espaciados y áreas táctiles.
 
-**Fixes técnicos transversales (aplican a las tres superficies porque son reglas globales del mismo `index.css`):**
-- **Zoom automático de iOS resuelto de raíz:** Safari/iPhone agranda la pantalla solo al enfocar un `<input>` con `font-size` menor a 16px (pasaba, por ejemplo, al abrir "Agendar turno"). Se llevó **todo** input/select/textarea a `font-size: 16px` en mobile. **No se usó** `maximum-scale=1` ni `user-scalable=no` en el meta viewport (rompe la accesibilidad de zoom) — esa era la solución incorrecta y se descartó a propósito.
-- **Freno anti-desborde horizontal:** `html, body, #root` con `overflow-x: hidden` solo en mobile, para que nada quede "bailando" de costado pase lo que pase.
-- **Mascota Bolty oculta en mobile:** decisión de producto (no fix del PNG) — resolvió el bug del recuadro/fondo que se veía en el celular. Ver sección 2.
-- **Avatar de la TopNav (dashboard cliente) en mobile** → usa el logo del negocio si existe, o la inicial del nombre del negocio (antes mostraba una inicial sacada de `session.user.user_metadata.name`, un dato grabado una sola vez al crear la cuenta desde el panel admin y totalmente desactualizado respecto del negocio real — ese dato "fantasma" sigue en el avatar de desktop, que no se tocó a propósito).
-- **Panel de notificaciones** (dashboard cliente) → contenido dentro del viewport (antes se salía de pantalla).
-- **Bug real encontrado y corregido en la landing:** el acordeón del FAQ tenía `max-height: 220px` fijo; en mobile el texto envuelve en más líneas por el ancho angosto y algunas respuestas largas se cortaban. Se subió a 480px en mobile.
+**Fixes transversales:**
+- **Zoom automático de iOS resuelto de raíz:** todo input/select/textarea a `font-size: 16px` en mobile (Safari agranda al enfocar inputs <16px). **No se usó** `maximum-scale=1`/`user-scalable=no` (rompe accesibilidad) — se descartó a propósito.
+- **Freno anti-desborde horizontal:** `html, body, #root` con `overflow-x: hidden` solo en mobile.
+- **Mascota Bolty oculta en mobile** (decisión de producto, no fix del PNG).
+- **Avatar de la TopNav en mobile** → usa el logo del negocio si existe, o la inicial del nombre del negocio (antes usaba un dato "fantasma" de `user_metadata` desactualizado; en desktop no se tocó a propósito).
+- **Panel de notificaciones** → contenido dentro del viewport.
+- **FAQ de la landing** → `max-height` subido a 480px en mobile (algunas respuestas largas se cortaban).
 
 ### 3.5 Landing de marketing (`Landing.tsx`)
-11 secciones: hero centrado (degradé violeta-verde, logo grande + acrónimo, sin botón "Ingresar" en el header), el problema (stats 78%/+3hs/1de3), la solución (mockup chat), cómo funciona (3 pasos), funciones destacadas (incluye reportes diarios/semanales, Instagram/chat web/idiomas), para quién es, por qué Bolty, planes con precio en "—", FAQ, CTA, footer. Botones de prueba/contacto NO crean cuenta todavía. Responsive completo (ver 3.4).
+11 secciones: hero centrado (degradé violeta-verde, logo grande + acrónimo, sin botón "Ingresar" en el header), el problema (stats 78%/+3hs/1de3), la solución (mockup chat), cómo funciona (3 pasos), funciones destacadas (reportes, Instagram/chat web/idiomas), para quién es, por qué Bolty, planes con precio en "—", FAQ, CTA, footer. Botones de prueba/contacto NO crean cuenta todavía. Responsive completo.
 
 ### 3.6 Mascota Bolty
-Ver sección 2 (marca). Oculta en mobile desde el 11/07.
+Ver sección 2. Oculta en mobile.
+
+### 3.7 Agenda con capacidad y empleados (HECHO — commit `c2d1d47`)
+La agenda ya **NO** asume 1 turno por horario. El dueño configura, de forma simple y flexible (`agenda_config` en `business_profiles`):
+- **Modo `simple`:** capacidad sin nombres — cuántos turnos entran en el mismo horario (`capacity`, ej. "5 peluqueros" → hasta 5 turnos a la misma hora).
+- **Modo `staff`:** empleados nombrados (tabla `employees`, con color y activo/inactivo). Cada uno con sus servicios (`employee_services`).
+- **Modo de asignación** (`assignment`): el cliente elige con quién, automático (al que esté libre), o sin asignar.
+- **Permitir superponer** (`allow_overlap`) por si una persona puede tener dos turnos a la misma hora.
+- **Disponibilidad real** (`src/lib/availability.ts`): calcula estado de cada empleado (libre / ocupado / no trabaja ese día u horario / no hace ese servicio), reparte los turnos del día en columnas por empleado con packing de solapamientos, y avisa (blando o bloqueante) al agendar. Distingue recursos **intercambiables** (alcanza con capacidad) de **especializados** (cada uno con sus servicios y horarios). Esta relación empleado↔servicio es la que el cerebro va a necesitar para no ofrecer, por ejemplo, la dermatóloga cuando piden "uñas".
+
+### 3.8 Rentabilidad por empleado (HECHO — commit `f29f475`)
+- Los gastos (`expenses`) pueden atribuirse a un empleado puntual (`expenses.employee_id`, nullable): sueldo, comisión, herramienta suya, etc. La categoría del gasto sigue igual; el empleado es una dimensión aparte, opcional.
+- Panel de rentabilidad (`src/components/equipo/RentabilidadPanel.tsx` en la vista Equipo): cruza los ingresos de los turnos que atendió cada empleado contra los gastos que se le atribuyen → cuánto deja cada persona.
+- **Sinergia futura:** cuando cada empleado tenga su propio login (multi-usuario, ver 6.3), la atribución del turno se vuelve automática y la rentabilidad, más confiable.
+
+### 3.9 Pagos pendientes de confirmación (HECHO — commit `a58de98`)
+Cuando un cliente manda un comprobante de transferencia, el pago se registra pero **no cuenta como ingreso** hasta que el dueño verifica en su banco que la plata entró. Construido **sin IA** (la parte de la app):
+- `payments` tiene `verified` (boolean, default TRUE — los pagos viejos siguen contando igual), `verified_at`, `proof_url` (comprobante a futuro) y `appointment_id` (vincula el pago con el turno que lo originó). SQL en `schema.sql` sección 24 (ya corrido en Supabase).
+- **Toggle "Pendiente de confirmación"** en Registrar pago/venta, **solo visible con transferencia** (con efectivo/tarjeta se oculta y se resetea: la plata ya está). Marca `verified = FALSE`.
+- **Solo los pagos verificados cuentan como ingreso** (KPIs, facturación, gráficos por forma de pago y por cuenta, balance, movimientos). Los pendientes van **siempre aparte**.
+- **Chip compacto ámbar** arriba de Finanzas (colapsado por defecto, con contador + total) que abre un **acordeón** con la lista completa: cada pendiente muestra todo para chequear en el banco de un vistazo (monto, cuenta + banco + número/alias/CBU cruzando `bank_accounts`, fecha, quién pagó, forma de pago). **KPI "Pendiente de confirmación"**. Botones **Confirmar** (→ verified=TRUE + verified_at, marca el turno pagado) y **Rechazar** (borra el pago; el turno vuelve a no pagado).
+- **Sincronizado con la Agenda:** el estado del turno se deriva del pago asociado — pago pendiente → badge ámbar "⏳ Pago pendiente"; pago confirmado (o turno marcado pagado) → verde "✓ Cobrado"; sin pago → botón `$`.
+- **Lo que falta (con IA):** que el agente detecte el comprobante por WhatsApp y cree el pago pendiente solo (depende del cerebro multimodal).
 
 ---
 
 ## 4. Decisiones tomadas
 
-### 4.1 Producto y negocio
-- **Planes y precios (ARS/mes):** Básico **$50.000** (~$44.000 ganancia), Estándar **$75.000** ("más elegido", ~$64.000), Pro **$125.000** (~$105.000). Margen ~85%. Todavía **no están puestos en la landing** (sigue en "—") hasta confirmarlos como definitivos.
-- **Control de acceso manual:** el administrador activa a cada cliente a mano (no hay alta automática con pago todavía).
-- **Prueba gratis de 7 días** que deriva a contacto (no auto-cobro).
-- **El agente responde con IA real** (no respuestas fijas), en varios idiomas.
-- **Multicanal:** WhatsApp, Instagram, chat web (y mail a futuro).
-- **Cada negocio usa su propio número** de WhatsApp (llave de identificación).
-- **Cobro:** Mercado Pago, en pesos (a implementar).
-- **Cada plan con límite de conversaciones/uso** (a definir números exactos) para proteger el margen.
+### 4.1 🪜 Escalera de planes — TANDA 2 (definida 14/07/2026)
+
+**Cambio de posicionamiento:** Bolty ya no compite como "un bot de WhatsApp" sino como **sistema de gestión pyme con IA adentro**. Eso cambia con quién te comparan y cuánto podés cobrar:
+- **Comparables (Argentina):** software de gestión pyme (Fudo, Bejerman, Colppy, Xubio) ≈ **$30.000–$80.000 ARS/mes**… y ninguno tiene un agente de IA contestando WhatsApp.
+- **El pitch más fuerte sigue siendo el empleado:** un administrativo con cargas ≈ **$700.000–900.000 ARS/mes**. Bolty a ~$50.000 es el **6%** de eso.
+
+**Las 3 palancas (y qué rol cumple cada una):**
+- **VOLUMEN = el piso / protección de margen.** La IA se paga por uso: si un cliente de $30 consume $50 de API, se regala plata. No es un gancho de venta, es un **límite**. Va en todos los planes.
+- **CAPACIDADES = el techo / lo que vende.** Nadie sube de plan por "más mensajes"; sube porque **necesita algo** (Instagram, finanzas, roles).
+- **EQUIPO = usuarios y líneas.** Suben con el plan; en el tope se compran **extras sueltos**.
+
+**LA ESCALERA:**
+
+| | **Entrada** | **Medio** | **Pro** | **Pro+** |
+|---|---|---|---|---|
+| **Canales** | WhatsApp | + Instagram, mail, chat web | igual | + multi-idioma |
+| **Líneas WhatsApp** | 1 | 1 | 2 | 3+ (extras pagos) |
+| **Módulos** | Agente + inventario + agenda simple (capacidad) | + Finanzas completas + Agenda con empleados | + Rentabilidad por empleado | + Reportes avanzados |
+| **Usuarios** | 1 (dueño) | 2 | 3 | **5** (+ extras pagos) |
+| **Volumen** | 300 conv/mes | 1.000 | 3.000 | 8.000 |
+| **Precio aprox. (USD ref.)** | ~$25-30 | ~$50-60 | ~$90-110 | ~$150-180 |
+
+- **Usuario extra:** ~$10-15 USD/mes (solo una vez alcanzado el tope del plan).
+- Cada plan ≈ **duplica** al anterior: el salto se siente significativo pero alcanzable.
+
+**Decisiones clave y su porqué:**
+- **WhatsApp va en TODOS los planes, incluso el más barato.** En Argentina, sin WhatsApp no hay producto: un plan de entrada sin WhatsApp no lo compra nadie = plan fantasma. Además es la mejor carta de venta; esconderlo detrás de un plan caro es esconderla.
+- **Mail y chat web van en el medio:** solos no venden nada (nadie paga por mail), pero suman valor percibido al paquete.
+- **El salto Entrada → Medio es EL MÁS IMPORTANTE:** ahí el cliente pasa de "tengo un bot" a "tengo un sistema". Es donde van a ocurrir la mayoría de los upgrades → tiene que ser tentador.
+- **Módulos, criterio de corte:** *inventario y agenda* van en TODOS porque **el agente los necesita para funcionar** (si no, el agente es tonto). *Finanzas y empleados* son **gestión pura** → se pagan. El plan de entrada da **un agente que funciona**; los de arriba dan **un negocio que se entiende a sí mismo**.
+- **Los usuarios crecen despacio a propósito:** si el plan de entrada ya diera 3 usuarios, nadie subiría por eso. El multi-usuario **tiene que doler** para que se pague.
+- **Al pasarse del volumen: NUNCA cortar el servicio.** Que el agente deje de responder = el negocio pierde clientes y te odia. Lo correcto: **avisar y cobrar el excedente** (ej. $X cada 100 conversaciones extra) o sugerir el upgrade. El cliente decide.
+- Una "conversación" = un intercambio con un cliente (no un mensaje suelto). Corte típico: la conversación vive 24hs (como hace Meta).
+
+**⚠️ Pendientes de esta definición:**
+- **Los precios son ORIENTATIVOS.** Faltan dos datos que solo se saben con el cerebro andando: (1) el **costo real de API por cliente**, (2) cómo reacciona el mercado.
+- **El precio se valida VENDIENDO, no calculando.** Los primeros 5 clientes dicen más que cualquier planilla: si aceptan sin dudar → está barato; si todos regatean → está caro.
+
+**Precios viejos (pre-TANDA 2, referencia histórica):** Básico $50.000 (~$44.000 ganancia), Estándar $75.000 ("más elegido", ~$64.000), Pro $125.000 (~$105.000), margen ~85%. Quedaron **superados por la escalera de arriba**. En cualquier caso, **los precios NO van en la landing todavía** (siguen en "—") hasta confirmarlos como definitivos.
 
 ### 4.2 Costos investigados (para referencia al definir precios/planes)
-- **API de Claude (cerebro):** modelo pensado, Haiku 4.5 (~US$1/M tokens entrada, US$5/M salida). Una conversación ≈ medio centavo USD. Cuenta de API separada del Claude Pro personal, con recarga automática + límite de gasto.
-- **Costo total estimado por cliente:** ~US$5-15/mes (WhatsApp + IA + infra), cubierto de sobra por los planes actuales.
+- **API de Claude (cerebro):** modelo pensado, Haiku 4.5 (~US$1/M tokens entrada, US$5/M salida). Una conversación ≈ medio centavo USD (con US$1 ≈ 200 conversaciones). Cuenta de API **separada** del Claude Pro personal, con recarga automática + límite de gasto (para no cortar la charla al cliente).
+- **Costo total estimado por cliente:** ~US$5-15/mes (WhatsApp + IA + infra), cubierto de sobra por los planes. Infra: arranca gratis; a escala ~US$25-50/mes total (no por cliente).
 - **WhatsApp Business API:**
   - Desde el 15/01/2026 Meta **prohíbe chatbots de IA de propósito general**; solo permite flujos orientados a tareas (consultar stock, agendar, FAQ) — Bolty debe presentarse así ante Meta.
-  - Aprobación no automática (1-6 semanas). Causa #1 de rechazo: nombre legal del negocio inconsistente entre Meta/web/domicilio.
-  - Mensajes de servicio (respondiendo dentro de la ventana de 24hs) son **gratis** en todo el mundo.
-  - BSP obligatorio: Twilio (buena opción para arrancar, sin cuota fija), 360dialog (buena para escalar).
-  - Estrategia: verificar Bolty UNA VEZ como plataforma + "embedded signup" (botón "Conectar mi WhatsApp") para que cada cliente conecte su número rápido (horas, no semanas) una vez que la plataforma ya está aprobada.
+  - Aprobación no automática (1-6 semanas). Causa #1 de rechazo: nombre legal del negocio inconsistente entre Meta/web/domicilio. Si rechazan, se reaplica a los 30 días.
+  - Mensajes de servicio (respondiendo dentro de la ventana de 24hs) son **gratis** en todo el mundo. Primeras 1.000 conversaciones de servicio/mes gratis.
+  - BSP obligatorio: Twilio (bueno para arrancar, sin cuota fija), 360dialog (bueno para escalar).
+  - Conexión **no oficial** (WhatsApp Web JS): gratis y sin trámites, pero Meta la prohíbe y banea el número — solo para probar/demos, nunca producción. **Oficial** (Meta/BSP) para el producto real.
+  - Estrategia: verificar Bolty UNA VEZ como plataforma + "embedded signup" (botón "Conectar mi WhatsApp") para que cada cliente conecte su número rápido (horas, no semanas). No prometer "instantáneo garantizado"; sí "conectás tu WhatsApp en el día". Armar el embedded signup es de lo último que se construye.
   - Probar primero el cerebro en el **chat web propio de Bolty** (sin WhatsApp, sin riesgo ni trámites).
 - **Tiempo estimado para lanzar:** beta usable 2-4 meses de trabajo constante (realista 3-6 meses). Cuello de botella: aprobación de Meta.
 
@@ -142,65 +200,81 @@ Ver sección 2 (marca). Oculta en mobile desde el 11/07.
 - **Frontend:** React + Vite + TypeScript. Carpeta local: `C:\Users\W10-PC\Desktop\bolty`.
 - **Base de datos + Auth + Storage:** Supabase, con RLS (cada cliente ve solo sus datos). Project URL: `https://gvjpohtrdiujvokliygn.supabase.co` (región São Paulo). Se usa la clave publicable (`sb_publishable_...`), no la secreta. Datos locales en `.env.local` (no se sube a GitHub).
 - **Hosting:** Vercel (plan Hobby) → **bolty-two.vercel.app**, deploy automático desde GitHub. Env vars cargadas en Vercel (Settings → Environment Variables).
-- **Repositorio:** GitHub → **Bolty153/bolty**, rama `master`. Cuenta Bolty153 / `bolty.arg.ia@gmail.com`.
-- **API de Claude (Anthropic):** todavía **no integrada en el código** (no hay Edge Functions ni llamadas a la API en `src/`) — es el próximo gran paso ("el cerebro"). Se prevé cuenta de API separada del Claude Pro personal.
+- **Repositorio:** GitHub → **Bolty153/bolty**, rama `master`. Cuenta Bolty153 / `bolty.arg.ia@gmail.com` (personal: `nicolasmateos153@gmail.com`).
+- **API de Claude (Anthropic):** todavía **no integrada en el código** (no hay Edge Functions ni llamadas a la API en `src/`) — es el próximo gran paso ("el cerebro"). Cuenta de API separada del Claude Pro personal.
 
 ### 5.1 Tablas en Supabase (verificado contra `supabase/schema.sql` + código)
-El archivo `supabase/schema.sql` es idempotente (se puede correr de nuevo sin romper nada) y **contiene**: `business_profiles`, `agent_configs`, `products`, `services`, `appointments`, `customers`, `payments`, `bank_accounts`, `plan_requests`, `support_tickets`, `support_access_requests`, `expenses`, `cards`.
+`supabase/schema.sql` es idempotente y **contiene**: `business_profiles`, `agent_configs`, `products`, `services`, `appointments`, `customers`, `payments`, `bank_accounts`, `plan_requests`, `support_tickets`, `support_access_requests`, `expenses`, `cards`, **`employees`**, **`employee_services`**. Extensión `unaccent` para el buscador (RPC `global_search`).
 
-> **Importante (verificado 11/07):** las tablas del lado admin — `profiles` (is_active, is_admin, must_change_password), `clients` y `plans` — **NO están en `schema.sql`**, se crearon a mano en el SQL Editor de Supabase en su momento y no quedaron guardadas en el repo. Si hay que recrear la base desde cero, falta ese SQL — conviene rescatarlo de los transcripts viejos o reconstruirlo y agregarlo al archivo.
+> **Importante:** las tablas del lado admin — `profiles` (is_active, is_admin, must_change_password), `clients` y `plans` — **NO están en `schema.sql`**, se crearon a mano en el SQL Editor y no quedaron guardadas en el repo. Si hay que recrear la base desde cero, falta ese SQL — conviene rescatarlo de transcripts viejos o reconstruirlo y agregarlo al archivo.
 
 Buckets de Storage: `logos`, `productos`, `remitos`, `servicios`, `soporte`.
-
-> Operativo: cuando se agrega una función que guarda algo nuevo, hay que **correr el SQL correspondiente en Supabase** (SQL Editor → Run) una vez. El código en GitHub/Vercel no crea las tablas solo.
 
 ---
 
 ## 6. Lo que falta hacer (hoja de ruta)
 
 ### 6.1 Núcleo / inteligencia — EL GRAN PRÓXIMO PASO
-- **El cerebro:** conectar la API de Claude (Anthropic) para que el agente responda de verdad con los datos del negocio. Requiere backend seguro (Edge Function de Supabase) para no exponer la API key. Probar primero en un chat web propio de Bolty, sin WhatsApp.
-- **Entrenador conversacional:** que el dueño le hable al agente como a un empleado nuevo (texto y audio) y aprenda, sin formularios.
+- **El cerebro:** conectar la API de Claude (Anthropic) para que el agente responda de verdad con los datos del negocio. Requiere backend seguro (Edge Function de Supabase) para no exponer la API key. Probar primero en un chat web propio de Bolty, sin WhatsApp. (Crear cuenta de API en `console.anthropic.com`, cargar saldo $5-10, recarga automática + límite de gasto, usar Haiku.)
+- **Entrenador conversacional:** que el dueño le hable al agente como a un empleado nuevo (texto y audio) y aprenda charlando, sin formularios. El usuario lo quiere **innovador, "el mejor de todos"**.
 - **Asistente virtual de Bolty:** al tocar la mascota, que abra un asistente de ayuda dentro del panel.
-- **Multimodal:** entender audios y leer fotos de productos, incluida la lectura automática de remitos (la pantalla ya está lista, solo falta la IA atrás).
-- **Conectar la config real:** que los switches de "Funciones", el tono y las instrucciones de "Mi agente" controlen de verdad al agente (hoy son solo maquetas/preferencias guardadas).
-- **Medir consumo y costo por cliente** (tokens de Claude + WhatsApp) en el panel admin.
-- **Comprobante de pago recibido por el agente:** que si un cliente manda un comprobante por WhatsApp, el agente lo registre en Finanzas como "pendiente de verificación" hasta que el dueño lo confirme a mano. (El estado "pendiente de verificación" en Finanzas se puede construir sin IA; la lectura automática del comprobante depende del cerebro multimodal.)
+- **Multimodal:** entender audios y leer fotos de productos, incluida la lectura automática de remitos y de **comprobantes de pago** (la parte de Finanzas ya está hecha, ver 3.9; falta la lectura automática con IA).
+- **Conectar la config real:** que los switches de "Funciones", el tono y las instrucciones de "Mi agente" controlen de verdad al agente (hoy son maquetas/preferencias guardadas).
+- **Que el agente responda LINDO:** formato (negrita/emojis/listas), fotos de productos (catálogo), botones/listas interactivas de WhatsApp, entender y responder audios.
 
-### 6.2 Agenda — capacidad y empleados (importante, hacer ANTES del cerebro)
-Hoy la agenda asume **1 turno por horario**, lo cual no sirve para peluquerías, barberías, consultorios, talleres, etc. Falta que el dueño pueda configurar, de forma simple y flexible:
-- **Capacidad simple:** cuántos turnos entran en el mismo horario (ej. "5 peluqueros" sin nombres).
-- **Empleados/recursos nombrados** (Raúl, Tomás, etc.).
-- **Modo de asignación** (a elección del dueño): el cliente elige con quién, automático/aleatorio, o sin asignar.
-- **Por empleado:** sus propios servicios y horarios, con un atajo para "todos iguales" si no hace falta complicarlo.
-- **Distinción clave:** recursos **intercambiables** (varios peluqueros que hacen lo mismo → alcanza con la capacidad) vs. recursos **especializados** (dermatóloga/manicura/odontólogo → cada uno con sus propios servicios y horarios, no intercambiables). El agente necesita esto para no ofrecer, por ejemplo, la dermatóloga cuando piden "uñas".
+**📊 Medición de consumo y costo (CRÍTICO — construir JUNTO con el cerebro):**
+- **No alcanza con contar conversaciones: hay que medir TOKENS REALES.** Una conversación larga puede costar 10× una corta. Debe verse **por cliente** y **por período**, cruzado con el plan que paga cada uno → **margen real por cliente**. Sin esto se vuela a ciegas.
+- **⭐ REGLA DE ORO DEL LÍMITE:** el límite de conversaciones de cada plan debe estar puesto en un número tal que, **incluso si el cliente lo consume al 100%, Bolty sigue ganando plata.** El peor caso posible tiene que seguir siendo rentable. Ojo: el cliente consume **conversaciones**, pero el costo son **TOKENS** — si el promedio de tokens por conversación resulta más alto de lo calculado, el límite está mal puesto aunque el conteo de conversaciones diga que todo bien. Solo se calibra con el cerebro andando y midiendo.
+- **👁️ DOBLE VISIBILIDAD DEL CONSUMO (dos vistas distintas):**
+  - **El CLIENTE ve (en su dashboard):** cuántas conversaciones usó de su plan (ej. "180 de 300 este mes"). **Sin costos** — no le incumben. Solo su consumo, para saber si se queda corto y evaluar subir de plan.
+  - **NICO ve (en el panel admin):** conversaciones + **tokens reales** + **costo en USD** + lo que ese cliente paga + **MARGEN resultante**, todo por cliente. Es el tablero de control del negocio.
+- Alertar si un cliente se acerca o supera el volumen de su plan (para avisar / cobrar excedente / sugerir upgrade — **nunca cortar el servicio**).
+
+### 6.2 ✅ Agenda — capacidad y empleados — HECHO
+Ya no es un pendiente. Ver **sección 3.7**. (Era el hueco del modelo viejo que asumía 1 turno por horario.)
 
 ### 6.3 Planes, permisos y uso
-- Permisos por plan (qué funciones/secciones da cada plan), incluyendo líneas de teléfono extra al subir de plan.
-- Límites de uso por plan (cantidad de conversaciones, etc.).
-- Consumo de tokens y costo por cliente visible en el panel admin.
+- **Permisos por plan** (qué funciones/secciones da cada plan), incluyendo líneas de teléfono extra al subir de plan.
+- **Límites de uso por plan** (cantidad de conversaciones; ver regla de oro en 6.1).
+- **👥 Multi-usuario con roles y permisos (feature de plan superior — idea fuerte):** que el **dueño del negocio** pueda crear, desde su propio dashboard y con un mail, **varios accesos** a SU negocio, cada uno con permisos distintos. Modelo estándar de SaaS B2B (Shopify, Fudo) y **genera retención** (si 5 personas del negocio lo usan a diario, no lo cambian).
+  - **Roles propuestos:** *Dueño* (todo) · *Encargado/Gerente* (finanzas, agenda, equipo, gastos — todo menos config crítica) · *Empleado* (solo agenda y sus turnos) · *Stock* (solo inventario) · *Recepción/Caja* (agenda + registrar pagos, sin ver finanzas globales).
+  - **Monetización:** usuarios **incluidos hasta el tope de cada plan**; pasado el tope, se compran **usuarios extra sueltos**. El plan tira del upgrade; el extra captura al que ya está en el techo. (Alineado con la escalera de 4.1.)
+  - **⚠️ A resolver al construir:** (a) qué pasa al dar de baja a un empleado con login (¿se borra el acceso? ¿sus turnos quedan?); (b) que un rol con acceso a agenda **no** vea precios/finanzas si no le corresponde; (c) los permisos se aplican **en la base (RLS)**, no solo escondiendo botones en la UI.
+  - **🔗 Sinergia con Equipo/Empleados:** si cada empleado tiene login propio, el turno se asigna solo al que lo carga → la **rentabilidad por empleado se vuelve automática y confiable** (ver 3.8).
 
 ### 6.4 Canales y cobros
-- Conexión real de WhatsApp / Instagram / chat web (Meta Cloud API / Twilio) — hoy la pantalla "Canales" ya existe pero todo figura "Sin conectar".
-- Sistema de cobros con Mercado Pago (suscripciones).
-- Conexión automática de inventario (Tienda Nube y otros) — hoy solo hay import Excel/CSV.
-- Responder mails (canal nuevo).
+**Dificultad de habilitación (de más fácil a más difícil):**
+1. **📧 Mail — el más FÁCIL, sin trámite ni aprobación.** Solo técnico (conectar casilla, envío/recepción). No depende de Meta. **Estratégico: se podría lanzar con mail + chat web mientras se tramita WhatsApp.** Ya figura como canal en la UI (dashboard y a mostrar en landing).
+2. **📸 Instagram — trámite medio.** Va por Meta, pero más liviano que WhatsApp.
+3. **💬 WhatsApp — el más PESADO.** Verificación del negocio, número dedicado, plantillas + la restricción de Meta con IA general. El más valioso en Argentina, el más difícil.
+
+Pendientes:
+- Conexión real de **WhatsApp** (cada negocio su número, vía BSP / embedded signup).
+- **Instagram**.
+- **Chat web** embebible.
+- **Responder mails** (la IA lee y redacta; opcional, el dueño lo activa).
+- **Multi-idioma** (portugués, francés, etc.).
+- **Cobros con Mercado Pago** (suscripciones; se conecta con "pedir cambio de plan" y la activación).
+- **Prueba gratis 7 días** con activación controlada; botón "Contactanos" a WhatsApp real.
+- **Definir precios definitivos** y ponerlos en la landing cuando se confirmen.
+- **Conexión automática de inventario** (Tienda Nube / Mercado Libre / WooCommerce / Shopify vía API/OAuth con un botón) — trabajo grande, hacerlo cuando haya clientes que lo pidan. Hoy cubierto con import Excel/CSV.
+
+> ⚠️ Las políticas de Meta cambian seguido: verificar requisitos actuales antes de encarar cada trámite.
 
 ### 6.5 Finanzas
-- Precio de costo por producto y margen real (hoy el balance es ingresos − gastos, sin costo de mercadería).
-- Mail automático de aviso de vencimiento de suscripción (depende de comprar el dominio propio, para que salga desde `@bolty.com` o `@bolty.com.ar` — confirmar extensión final).
+- **Precio de costo por producto y margen real** (hoy el balance es ingresos − gastos, sin costo de mercadería). Requiere agregar precio de costo a cada producto.
+- **Mail automático de aviso de vencimiento de suscripción:** debe salir desde una casilla del **dominio propio** (`@bolty.com` o `@bolty.com.ar` — confirmar extensión). Depende de comprar el dominio.
+- **Al crear cliente (admin): opción de enviar WhatsApp** con la contraseña temporal + la dirección de Bolty (check al crear). Se puede arrancar sin IA con un link `wa.me` y mensaje pre-armado; el envío 100% automático depende de la API de WhatsApp.
 
 ### 6.6 Búsqueda global — ajuste fino pendiente
-Hoy el buscador abre la ficha completa solo para clientes; para productos/servicios/pagos precarga el término de búsqueda en la sección (no abre el modal exacto); para turnos salta a la fecha en Agenda (no abre el turno). Falta: abrir directo el ítem/modal exacto en todos los casos.
-
-> ✅ **Responsive mobile (dashboard, landing y panel admin): completo desde el 11/07.** Ver sección 3.4. Ya no es un pendiente.
+Hoy abre la ficha completa solo para clientes; para productos/servicios/pagos precarga el término en la sección (no abre el modal exacto); para turnos salta a la fecha en Agenda. Falta: abrir directo el ítem/modal exacto en todos los casos y resaltar el pago puntual. (El buscador ya cubre 6 entidades, incluidos empleados.)
 
 ### 6.7 Trámites / legal (fuera del código)
-- Registro de la marca Bolty en INPI (atención a similitud con "Bolt").
-- WhatsApp Business API con Meta (alta y aprobación).
-- Dominio propio (`.com` o `.com.ar` — confirmar) y migrar de `bolty-two.vercel.app`.
-- Formalizar el negocio (nombre legal consistente, clave para que Meta apruebe WhatsApp).
-- Documentos legales del SaaS antes de tener muchos clientes: Términos y Condiciones, Política de Privacidad (Ley 25.326 de Protección de Datos Personales en Argentina, más el impacto de usar servicios de IA en el exterior), checkbox de aceptación al registrarse, links en el footer. Consultar con un abogado especializado antes de lanzar en serio.
+- Registro de la marca **Bolty en INPI** (atención a similitud con "Bolt").
+- **WhatsApp Business API** con Meta (alta y aprobación).
+- **Dominio propio** (`.com` o `.com.ar` — confirmar) y migrar de `bolty-two.vercel.app`.
+- **Formalizar el negocio** (nombre legal consistente — clave para que Meta apruebe).
+- **⚖️ Documentos legales del SaaS** antes de tener muchos clientes: Términos y Condiciones, Política de Privacidad (Ley 25.326 de Protección de Datos Personales en Argentina, más el impacto de usar IA en el exterior; el negocio-cliente es responsable de los datos de SUS clientes y Bolty los procesa para prestar el servicio), checkbox de aceptación al registrarse, links en el footer. **Consultar con un abogado** especializado antes de lanzar en serio — esto es un mapa, no asesoramiento legal.
 
 ---
 
@@ -233,9 +307,9 @@ Hoy el buscador abre la ficha completa solo para clientes; para productos/servic
 
 ## 8. Marketing — video de presentación (pendiente de producir)
 
-**Herramienta recomendada:** para un video con voz en off narrando, la opción más simple es **InVideo AI** (invideo.io): de un prompt arma guión + escenas + voz en español + música + subtítulos (plan gratis con marca de agua/límite de minutos). Alternativa de máxima calidad: **Google Veo 3** (gratis vía Google AI Studio, clips de 8s con audio) + **CapCut** para unir/editar, y **ElevenLabs** para voz premium de marca.
+**Herramienta recomendada:** para un video con voz en off narrando, la opción más simple es **InVideo AI** (invideo.io): de un prompt arma guión + escenas + voz en español + música + subtítulos (plan gratis con marca de agua/límite). Alternativa de máxima calidad: **Google Veo 3** (gratis vía Google AI Studio, clips de 8s con audio) + **CapCut** para unir/editar, y **ElevenLabs** para voz premium de marca.
 
-**Guión vigente** (cinematográfico/sci-fi, 55 segundos, reemplaza a un guión viejo tipo "empleado que nunca duerme"):
+**Guión vigente** (cinematográfico/sci-fi, 55 segundos):
 
 ```
 Creá un video promocional CINEMATOGRÁFICO y FUTURISTA de 55 segundos para presentar "Bolty", una inteligencia artificial para negocios. Estilo tráiler de ciencia ficción tecnológica, elegante y premium.
@@ -274,22 +348,22 @@ ESCENA 6 (visual: fondo oscuro premium; aparece el logo de Bolty —la letra B c
 
 ## 9. Archivos del proyecto
 
-- **Maestro único:** este archivo, `bolty-proyecto-maestro.md`, en la raíz del proyecto. Conviene subirlo a GitHub y arrastrarlo a chats nuevos.
+- **Maestro único:** este archivo, `bolty-proyecto-maestro.md`, en la raíz del proyecto. Conviene subirlo a GitHub y arrastrarlo a chats nuevos. (Reemplazó a `bolty-resumen-maestro.md`, ya borrado.)
 - `bolty-dashboard.html` — prototipo viejo, no se toca.
-- `supabase/schema.sql` — todo el SQL idempotente de las tablas del lado negocio (ver salvedad en sección 5.1 sobre `profiles`/`clients`/`plans`).
-- Imagen y video de la mascota: `public/bolty-mascota.png` (poster/respaldo, con fondo) y `public/bolty-animado.webm` (el real, transparente).
-- Documentos de chats anteriores (guiones, mockups) que puedan existir sueltos en outputs de conversaciones viejas no forman parte del repo — si hace falta algo de ahí, rescatarlo puntualmente.
+- `supabase/schema.sql` — todo el SQL idempotente de las tablas del lado negocio (ver salvedad en 5.1 sobre `profiles`/`clients`/`plans`).
+- Mascota: `public/bolty-mascota.png` (poster/respaldo, con fondo) y `public/bolty-animado.webm` (el real, transparente).
+- Transcripts de chats anteriores (con SQL y capturas viejas) no forman parte del repo — rescatar algo puntual si hace falta.
 
 ---
 
 ## 10. Orden de trabajo sugerido (próximos pasos)
 
-1. **Agenda — capacidad y empleados** (hueco real del modelo actual, mejor resolverlo antes que el cerebro dependa de turnos mal modelados).
-2. **El cerebro:** backend + API de Claude para que el agente responda de verdad (probar primero en el chat web propio).
-3. **Conectar WhatsApp** (primer canal real, embedded signup).
-4. **Permisos y límites por plan** + consumo/costo por cliente en el panel admin.
-5. **Cobros con Mercado Pago.**
-6. Sumar Instagram, chat web real, audios y fotos.
+1. **El cerebro:** backend (Edge Function) + API de Claude para que el agente responda de verdad, probando primero en el **chat web propio de Bolty**. Junto con esto, construir la **medición de tokens/costo/margen por cliente** (regla de oro + doble visibilidad, 6.1).
+2. **Conectar WhatsApp** (primer canal real, embedded signup). En paralelo, mail y chat web (más fáciles).
+3. **Permisos y límites por plan** + **multi-usuario con roles** (6.3).
+4. **Cobros con Mercado Pago.**
+5. Sumar Instagram, audios y fotos, multi-idioma.
+6. **Ajuste fino del buscador** (6.6) y **costo/margen por producto** (6.5) cuando convenga.
 7. **Trámites** (marca, WhatsApp API, dominio, legal) en paralelo.
 
 ---

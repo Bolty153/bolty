@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useEffectiveUserId } from '../context/AuthContext'
+// Fuente única de verdad de los planes (ver src/lib/plans.ts).
+import { planKeyFromName } from '../lib/plans'
+
+// Re-export por compatibilidad con quienes lo importaban desde acá.
+export { planKeyFromName }
 
 export interface PlanRequest {
   id: string
@@ -10,16 +15,6 @@ export interface PlanRequest {
   requested_plan: string
   status: string   // pendiente | hecho | rechazado
   created_at: string
-}
-
-// Mapea el nombre de un plan ("Pro", "Estándar"…) a nuestra clave interna.
-export function planKeyFromName(name?: string | null): string | null {
-  if (!name) return null
-  const t = name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-  if (t.includes('pro')) return 'pro'
-  if (t.includes('estandar') || t.includes('standard')) return 'estandar'
-  if (t.includes('basico')) return 'basico'
-  return null
 }
 
 /** Cliente: lee su plan actual real desde la tabla clients/plans. */

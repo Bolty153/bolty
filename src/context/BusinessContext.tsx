@@ -79,7 +79,7 @@ const DEFAULT_BUSINESS: BusinessProfile = {
   business_hours: DEFAULT_HOURS,
   agenda_config: DEFAULT_AGENDA_CONFIG,
   onboarding_complete: false,
-  plan: 'basico',
+  plan: 'entrada',
 }
 
 const DEFAULT_AGENT: AgentConfig = {

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+// Fuente única de verdad de los planes (ver src/lib/plans.ts).
+import { PLANS as PLAN_DEFS } from '../lib/plans'
 
 interface Props {
   onEnter: () => void
@@ -69,8 +71,18 @@ const ICONS = {
   zap: <path d="M13 2L3 14h7l-1 8 11-12h-7l1-8z" />,
   shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
   trend: <><path d="M23 6l-9.5 9.5-5-5L1 18" /><path d="M17 6h6v6" /></>,
+  users: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></>,
   chevron: <path d="M6 9l6 6 6-6" />,
 }
+
+// Iconos de los 5 ejes de la escalera, en el mismo orden que se muestran.
+const PLAN_AXES: { key: 'canales' | 'lineas' | 'modulos' | 'usuarios' | 'conversaciones'; label: string; ic: ReactNode }[] = [
+  { key: 'canales', label: 'Canales', ic: ICONS.globe },
+  { key: 'lineas', label: 'Líneas WhatsApp', ic: ICONS.whatsapp },
+  { key: 'modulos', label: 'Módulos', ic: ICONS.box },
+  { key: 'usuarios', label: 'Usuarios', ic: ICONS.users },
+  { key: 'conversaciones', label: 'Conversaciones', ic: ICONS.chat },
+]
 
 // ───────────────────────── Data ─────────────────────────
 const STATS = [
@@ -117,24 +129,6 @@ const BENEFITS = [
   { t: 'Atención siempre profesional', d: 'Mismo tono, mismo nivel de atención, todas las veces. Sin un mal día.', ic: ICONS.shield },
   { t: 'Decisiones con datos reales', d: 'Bolty te muestra qué pasa en tu negocio, no tenés que adivinar.', ic: ICONS.chart },
   { t: 'Crece mientras dormís', d: 'Tu negocio sigue atendiendo, agendando y vendiendo aunque vos no estés.', ic: ICONS.heart },
-]
-
-const PLANS = [
-  {
-    name: 'Básico', price: '—', desc: 'Para arrancar a automatizar tu WhatsApp.',
-    feats: ['1 canal de WhatsApp', 'Respuestas automáticas 24/7', 'Agenda de turnos', 'Reporte diario', 'Soporte por chat'],
-    featured: false,
-  },
-  {
-    name: 'Pro', price: '—', desc: 'El más elegido por negocios que ya venden por WhatsApp.',
-    feats: ['Todo lo del plan Básico', 'WhatsApp + Instagram + Web + Mail', 'Entiende audios y fotos', 'Consulta de stock en vivo', 'Reportes semanales inteligentes', 'Alertas en el momento'],
-    featured: true,
-  },
-  {
-    name: 'Empresa', price: '—', desc: 'Para negocios con varias sucursales o mucho volumen.',
-    feats: ['Todo lo del plan Pro', 'Múltiples sucursales', 'Catálogo y stock avanzado', 'Reportes a medida', 'Soporte prioritario'],
-    featured: false,
-  },
 ]
 
 const FAQS = [
@@ -497,17 +491,29 @@ export default function Landing({ onEnter }: Props) {
               </button>
             </div>
           </Reveal>
-          <div className="lp-plans">
-            {PLANS.map((p, i) => (
-              <Reveal key={p.name} delay={i * 100}>
-                <div className={`lp-plan${p.featured ? ' featured' : ''}`}>
-                  {p.featured && <span className="lp-plan-badge">Más elegido</span>}
+          <div className="lp-plans lp-plans-4">
+            {PLAN_DEFS.map((p, i) => (
+              <Reveal key={p.key} delay={i * 80}>
+                <div className={`lp-plan${p.recommended ? ' featured' : ''}`}>
+                  {p.recommended && <span className="lp-plan-badge">Más elegido</span>}
                   <h3>{p.name}</h3>
-                  <div className="price">{p.price}<span> /mes</span></div>
-                  <div className="desc">{p.desc}</div>
-                  <ul>
-                    {p.feats.map(f => (
-                      <li key={f}><Icon d={ICONS.check} /><span>{f}</span></li>
+                  {/* Precios todavía sin definir: van en "—" hasta confirmarlos. */}
+                  <div className="price">—<span> /mes</span></div>
+                  <div className="desc">{p.tagline}</div>
+                  {p.unlock && (
+                    <div className="lp-plan-unlock">
+                      <Icon d={ICONS.trend} /><span><b>Al subir:</b> {p.unlock}</span>
+                    </div>
+                  )}
+                  <ul className="lp-plan-axes">
+                    {PLAN_AXES.map(ax => (
+                      <li key={ax.key}>
+                        <Icon d={ax.ic} />
+                        <div className="lp-plan-ax">
+                          <span className="lp-plan-ax-k">{ax.label}</span>
+                          <span className="lp-plan-ax-v">{p.axes[ax.key]}</span>
+                        </div>
+                      </li>
                     ))}
                   </ul>
                   <button className="lp-plan-btn" onClick={handleContact}>Contactanos</button>

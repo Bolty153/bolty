@@ -254,7 +254,7 @@ export default function AdminControl() {
         <div className="modal-ov" onClick={e => { if (e.target === e.currentTarget) { setShowPlanForm(false); setEditPlan(null) } }}>
           <div className="modal-box">
             <h2>{editPlan ? 'Editar plan' : 'Nuevo plan'}</h2>
-            <div className="field"><label>Nombre *</label><input value={planForm.name} onChange={e => setPlanForm(f => ({ ...f, name: e.target.value }))} placeholder="Ej: Estándar" /></div>
+            <div className="field"><label>Nombre *</label><input value={planForm.name} onChange={e => setPlanForm(f => ({ ...f, name: e.target.value }))} placeholder="Ej: Medio" /></div>
             <div className="field"><label>Precio mensual ($) *</label><input type="number" value={planForm.price_ars} onChange={e => setPlanForm(f => ({ ...f, price_ars: e.target.value }))} placeholder="0" /></div>
             <div className="field"><label>Descripción</label><input value={planForm.description} onChange={e => setPlanForm(f => ({ ...f, description: e.target.value }))} placeholder="Ej: Hasta 2000 mensajes/mes" /></div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
