@@ -29,7 +29,7 @@ export type ViewId = 'inicio' | 'agente' | 'funciones' | 'reportes' | 'agenda' |
 
 // Foco de navegación: al abrir un resultado del buscador prefiltramos la vista
 // destino. `ts` fuerza que el efecto de la vista se dispare aunque el término repita.
-export interface ViewFocus { term?: string; date?: string; ts: number }
+export interface ViewFocus { term?: string; date?: string; pm?: 'cuentas' | 'tarjetas'; ts: number }
 
 function renderView(view: ViewId, onNavigate: (v: ViewId) => void, focus: ViewFocus | null) {
   const f = focus ?? undefined

@@ -757,6 +757,47 @@ as $$
              or unaccent(coalesce(x.account, '')) ilike (select p from pat) )
         order by x.pay_date desc limit per
       ) t
+    ),
+    'empleados', (
+      select coalesce(jsonb_agg(to_jsonb(t) order by t.name), '[]'::jsonb) from (
+        select * from public.employees x
+        where x.user_id = target_uid
+          and ( unaccent(x.name) ilike (select p from pat)
+             or unaccent(coalesce(x.role, '')) ilike (select p from pat) )
+        order by x.name limit per
+      ) t
+    ),
+    'gastos', (
+      select coalesce(jsonb_agg(to_jsonb(t) order by t.expense_date desc), '[]'::jsonb) from (
+        select * from public.expenses x
+        where x.user_id = target_uid
+          and ( unaccent(coalesce(x.description, '')) ilike (select p from pat)
+             or unaccent(coalesce(x.category, '')) ilike (select p from pat)
+             or unaccent(coalesce(x.supplier, '')) ilike (select p from pat) )
+        order by x.expense_date desc limit per
+      ) t
+    ),
+    'cuentas', (
+      select coalesce(jsonb_agg(to_jsonb(t) order by t.name), '[]'::jsonb) from (
+        select * from public.bank_accounts x
+        where x.user_id = target_uid
+          and ( unaccent(x.name) ilike (select p from pat)
+             or unaccent(coalesce(x.bank, '')) ilike (select p from pat)
+             or unaccent(coalesce(x.number, '')) ilike (select p from pat)
+             or unaccent(coalesce(x.alias_cbu, '')) ilike (select p from pat)
+             or unaccent(coalesce(x.holder, '')) ilike (select p from pat) )
+        order by x.name limit per
+      ) t
+    ),
+    'tarjetas', (
+      select coalesce(jsonb_agg(to_jsonb(t) order by t.name), '[]'::jsonb) from (
+        select * from public.cards x
+        where x.user_id = target_uid
+          and ( unaccent(x.name) ilike (select p from pat)
+             or unaccent(coalesce(x.bank, '')) ilike (select p from pat)
+             or unaccent(coalesce(x.last4, '')) ilike (select p from pat) )
+        order by x.name limit per
+      ) t
     )
   );
 $$;
@@ -1182,3 +1223,16 @@ end;
 $fn$;
 
 grant execute on function public.agenda_free_slots(uuid, date, uuid, int, int, uuid) to anon, authenticated;
+
+-- =====================================================================
+-- 23) RENTABILIDAD POR EMPLEADO — gasto atribuible a una persona
+--     Un gasto puede ser general del negocio (employee_id NULL) o atribuido
+--     a un empleado puntual (sueldo, comisión, herramienta suya, etc.).
+--     La CATEGORÍA (Sueldos, etc.) sigue igual: el empleado es una dimensión
+--     aparte, opcional, que NO reemplaza la categoría.
+--     Aditivo y nullable: los gastos existentes quedan como generales.
+-- =====================================================================
+alter table public.expenses
+  add column if not exists employee_id uuid references public.employees(id) on delete set null;
+
+create index if not exists expenses_employee_idx on public.expenses(user_id, employee_id);

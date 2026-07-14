@@ -4,7 +4,7 @@ import type { Customer } from '../../hooks/useCustomers'
 import { fmtMoney } from '../../hooks/useFinance'
 import { useGlobalSearch, totalCount, MIN_CHARS } from '../../hooks/useGlobalSearch'
 
-export interface NavFocus { term?: string; date?: string }
+export interface NavFocus { term?: string; date?: string; pm?: 'cuentas' | 'tarjetas' }
 
 interface Props {
   onNavigate: (view: ViewId, focus?: NavFocus) => void
@@ -12,14 +12,18 @@ interface Props {
   autoFocus?: boolean
 }
 
-type GroupKey = 'productos' | 'servicios' | 'clientes' | 'turnos' | 'pagos'
+type GroupKey = 'productos' | 'servicios' | 'clientes' | 'turnos' | 'empleados' | 'pagos' | 'gastos' | 'cuentas' | 'tarjetas'
 
-const GROUP_META: Record<GroupKey, { label: string; view: ViewId | null; icon: ReactNode }> = {
-  productos: { label: 'Productos', view: 'productos', icon: <IcBox /> },
-  servicios: { label: 'Servicios', view: 'servicios', icon: <IcTag /> },
-  clientes:  { label: 'Clientes',  view: null,        icon: <IcUser /> },
-  turnos:    { label: 'Turnos',    view: 'agenda',    icon: <IcCal /> },
-  pagos:     { label: 'Pagos y ventas', view: 'finanzas', icon: <IcMoney /> },
+const GROUP_META: Record<GroupKey, { label: string; icon: ReactNode }> = {
+  productos: { label: 'Productos', icon: <IcBox /> },
+  servicios: { label: 'Servicios', icon: <IcTag /> },
+  clientes:  { label: 'Clientes',  icon: <IcUser /> },
+  turnos:    { label: 'Turnos',    icon: <IcCal /> },
+  empleados: { label: 'Equipo',    icon: <IcTeam /> },
+  pagos:     { label: 'Pagos y ventas', icon: <IcMoney /> },
+  gastos:    { label: 'Gastos',    icon: <IcReceipt /> },
+  cuentas:   { label: 'Cuentas',   icon: <IcBank /> },
+  tarjetas:  { label: 'Tarjetas',  icon: <IcCard /> },
 }
 
 // Normaliza para comparar: minúsculas + sin acentos, preservando la longitud
@@ -92,6 +96,14 @@ export default function GlobalSearch({ onNavigate, onOpenCustomer, autoFocus }: 
       }))
       push(verTodos('turnos', () => { onNavigate('agenda', {}); setOpen(false) }))
     }
+    if (results.empleados.length) {
+      results.empleados.forEach(e => push({
+        group: 'empleados', kind: 'item',
+        action: () => { onNavigate('equipo'); close() },
+        content: <Row title={hl(e.name, q)} sub={[e.role ? hl(e.role, q) : null]} />,
+      }))
+      push(verTodos('empleados', () => { onNavigate('equipo'); setOpen(false) }))
+    }
     if (results.pagos.length) {
       results.pagos.forEach(p => push({
         group: 'pagos', kind: 'item',
@@ -99,6 +111,36 @@ export default function GlobalSearch({ onNavigate, onOpenCustomer, autoFocus }: 
         content: <Row title={hl(p.customer_name || p.description || 'Pago', q)} sub={[fmtDay(p.pay_date), p.method]} right={fmtMoney(p.amount)} />,
       }))
       push(verTodos('pagos', () => { onNavigate('finanzas', { term: q }); setOpen(false) }))
+    }
+    if (results.gastos.length) {
+      results.gastos.forEach(g => push({
+        group: 'gastos', kind: 'item',
+        action: () => { onNavigate('finanzas', { term: g.description || g.category }); close() },
+        content: <Row title={hl(g.description || g.category, q)} sub={[hl(g.category, q), g.supplier ? hl(g.supplier, q) : null, fmtDay(g.expense_date)]} right={`−${fmtMoney(g.amount)}`} />,
+      }))
+      push(verTodos('gastos', () => { onNavigate('finanzas', { term: q }); setOpen(false) }))
+    }
+    if (results.cuentas.length) {
+      results.cuentas.forEach(c => {
+        const numAlias = c.number || c.alias_cbu
+        push({
+          group: 'cuentas', kind: 'item',
+          action: () => { onNavigate('finanzas', { pm: 'cuentas' }); close() },
+          content: <Row title={hl(c.name, q)} sub={[c.bank ? hl(c.bank, q) : null, numAlias ? hl(numAlias, q) : null, c.holder ? hl(c.holder, q) : null]} />,
+        })
+      })
+      push(verTodos('cuentas', () => { onNavigate('finanzas', { pm: 'cuentas' }); setOpen(false) }))
+    }
+    if (results.tarjetas.length) {
+      results.tarjetas.forEach(c => push({
+        group: 'tarjetas', kind: 'item',
+        action: () => { onNavigate('finanzas', { pm: 'tarjetas' }); close() },
+        content: <Row
+          title={<>{hl(c.name, q)}{c.last4 ? <> ••••{hl(c.last4, q)}</> : null}</>}
+          sub={[c.bank ? hl(c.bank, q) : null, c.type === 'credito' ? 'Crédito' : 'Débito']}
+        />,
+      }))
+      push(verTodos('tarjetas', () => { onNavigate('finanzas', { pm: 'tarjetas' }); setOpen(false) }))
     }
     return out
 
@@ -149,7 +191,7 @@ export default function GlobalSearch({ onNavigate, onOpenCustomer, autoFocus }: 
           onChange={e => { setTerm(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder="Buscar productos, servicios, clientes, turnos, pagos…"
+          placeholder="Buscar productos, clientes, turnos, empleados, pagos…"
           autoFocus={autoFocus}
         />
         {term && (
@@ -219,3 +261,7 @@ function IcTag()   { return <svg fill="none" stroke="currentColor" strokeWidth="
 function IcUser()  { return <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg> }
 function IcCal()   { return <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg> }
 function IcMoney() { return <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg> }
+function IcTeam()  { return <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg> }
+function IcReceipt() { return <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z" /><path d="M8 7h8M8 11h8M8 15h5" /></svg> }
+function IcBank()  { return <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 21h18M3 10h18M5 6l7-4 7 4M4 10v11M20 10v11M8 10v11M16 10v11" /></svg> }
+function IcCard()  { return <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" /><path d="M1 10h22" /></svg> }

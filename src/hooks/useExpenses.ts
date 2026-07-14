@@ -24,6 +24,7 @@ export interface Expense {
   category: string
   source: ExpenseSource
   account: string | null        // qué cuenta/tarjeta, si source lo requiere
+  employee_id: string | null    // gasto atribuido a un empleado (null = gasto general)
   description: string | null
   supplier: string | null
   expense_date: string          // 'YYYY-MM-DD'
@@ -35,6 +36,7 @@ export interface ExpenseInput {
   category: string
   source: ExpenseSource
   account?: string | null
+  employee_id?: string | null
   description?: string | null
   supplier?: string | null
   expense_date: string

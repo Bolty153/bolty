@@ -7,6 +7,7 @@ import { EXPENSE_CATEGORIES } from '../../hooks/useExpenses'
 import type { Expense, ExpenseInput, ExpenseSource } from '../../hooks/useExpenses'
 import type { BankAccount, BankAccountInput } from '../../hooks/useBankAccounts'
 import type { Card, CardKind } from '../../hooks/useCards'
+import type { Employee } from '../../hooks/useEmployees'
 
 const todayKey = () => {
   const d = new Date()
@@ -17,11 +18,12 @@ const OTHER = '__otra__'
 const CARD_TYPE_LABEL: Record<CardKind, string> = { credito: 'Crédito', debito: 'Débito' }
 
 export default function ExpenseForm({
-  accounts, onSaveAccount, cards, expense, onClose, onSave,
+  accounts, onSaveAccount, cards, employees = [], expense, onClose, onSave,
 }: {
   accounts: BankAccount[]
   onSaveAccount: (a: BankAccountInput) => Promise<void>
   cards?: Card[]
+  employees?: Employee[]
   expense?: Expense | null
   onClose: () => void
   onSave: (input: ExpenseInput) => Promise<void>
@@ -33,6 +35,7 @@ export default function ExpenseForm({
   const [source, setSource] = useState<ExpenseSource>(expense?.source ?? 'efectivo')
   const [account, setAccount] = useState<AccountState>(expense?.source === 'cuenta_bancaria' ? { ...emptyAccount(), name: expense.account ?? '' } : emptyAccount())
   const [cardName, setCardName] = useState(expense?.source === 'tarjeta_empresa' ? (expense.account ?? '') : '')
+  const [employeeId, setEmployeeId] = useState<string>(expense?.employee_id ?? '')
   const [supplier, setSupplier] = useState(expense?.supplier ?? '')
   const [description, setDescription] = useState(expense?.description ?? '')
   const [date, setDate] = useState(expense?.expense_date ?? todayKey())
@@ -61,6 +64,7 @@ export default function ExpenseForm({
         category: finalCategory,
         source,
         account: accountText,
+        employee_id: employeeId || null,
         supplier: supplier.trim() || null,
         description: description.trim() || null,
         expense_date: date,
@@ -91,6 +95,17 @@ export default function ExpenseForm({
             <input type="text" style={{ marginTop: 10 }} value={customCat} onChange={e => setCustomCat(e.target.value)} placeholder="Nombre de la categoría" />
           )}
         </div>
+
+        {employees.length > 0 && (
+          <div className="field">
+            <label>¿Es de un empleado? (opcional)</label>
+            <select className="inv-select" style={{ width: '100%' }} value={employeeId} onChange={e => setEmployeeId(e.target.value)}>
+              <option value="">Gasto general del negocio</option>
+              {employees.map(e => <option key={e.id} value={e.id}>{e.name}{e.role ? ` · ${e.role}` : ''}</option>)}
+            </select>
+            <div className="hint">Si es un costo de una persona puntual (sueldo, comisión…), elegila para medir su rentabilidad.</div>
+          </div>
+        )}
 
         {/* ORIGEN de los fondos con que se paga el gasto */}
         <div className="field">

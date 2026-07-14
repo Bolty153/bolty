@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { fmtMoney } from '../../hooks/useFinance'
 import type { Expense } from '../../hooks/useExpenses'
 import type { BankAccount, BankAccountInput } from '../../hooks/useBankAccounts'
@@ -33,7 +33,7 @@ const dayLabel = (n: number) => n === 0 ? 'hoy' : n === 1 ? 'en 1 día' : `en ${
 export default function PaymentMethods({
   accounts, addAccount, updateAccount, deleteAccount,
   cards, addCard, updateCard, deleteCard,
-  rangeExpenses, periodLabel,
+  rangeExpenses, periodLabel, focusTab, focusTs,
 }: {
   accounts: BankAccount[]
   addAccount: (input: BankAccountInput) => Promise<void>
@@ -45,8 +45,19 @@ export default function PaymentMethods({
   deleteCard: (id: string) => Promise<void>
   rangeExpenses: Expense[]
   periodLabel: string
+  focusTab?: Tab
+  focusTs?: number
 }) {
   const [tab, setTab] = useState<Tab>('cuentas')
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  // Cuando llega un foco desde el buscador global (Cuentas/Tarjetas), abrimos
+  // esa pestaña y traemos la sección a la vista. `focusTs` fuerza el re-disparo.
+  useEffect(() => {
+    if (!focusTab) return
+    setTab(focusTab)
+    rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [focusTs, focusTab])
   const [accFormOpen, setAccFormOpen] = useState(false)
   const [editingAcc, setEditingAcc] = useState<BankAccount | null>(null)
   const [cardFormOpen, setCardFormOpen] = useState(false)
@@ -102,7 +113,7 @@ export default function PaymentMethods({
   }
 
   return (
-    <div className="card" style={{ marginTop: 18 }}>
+    <div className="card" style={{ marginTop: 18 }} ref={rootRef}>
       <div className="card-h"><h3>Medios de pago</h3></div>
       <div className="sub">Cuentas bancarias y tarjetas que usa tu negocio</div>
 

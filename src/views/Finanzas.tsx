@@ -8,6 +8,7 @@ import { useProducts } from '../hooks/useProducts'
 import { useServices } from '../hooks/useServices'
 import { useBankAccounts } from '../hooks/useBankAccounts'
 import { useCards } from '../hooks/useCards'
+import { useEmployees } from '../hooks/useEmployees'
 import PaymentForm from '../components/finance/PaymentForm'
 import SaleForm from '../components/finance/SaleForm'
 import ExpenseForm from '../components/finance/ExpenseForm'
@@ -43,6 +44,7 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
   const { services } = useServices()
   const { accounts, addAccount, updateAccount, deleteAccount } = useBankAccounts()
   const { cards, addCard, updateCard, deleteCard } = useCards()
+  const { employees } = useEmployees()
 
   const [payOpen, setPayOpen] = useState(false)
   const [saleOpen, setSaleOpen] = useState(false)
@@ -428,6 +430,7 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
         accounts={accounts} addAccount={addAccount} updateAccount={updateAccount} deleteAccount={deleteAccount}
         cards={cards} addCard={addCard} updateCard={updateCard} deleteCard={deleteCard}
         rangeExpenses={rangeExpenses} periodLabel={periodLabel}
+        focusTab={focus?.pm} focusTs={focus?.ts}
       />
 
       {/* Movimientos: ingresos (+) y gastos (−) unidos */}
@@ -526,6 +529,7 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
           accounts={accounts}
           onSaveAccount={addAccount}
           cards={cards}
+          employees={employees.filter(e => e.active)}
           expense={editingExpense}
           onClose={() => { setExpenseOpen(false); setEditingExpense(null) }}
           onSave={async input => {

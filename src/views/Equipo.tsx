@@ -3,6 +3,7 @@ import { useEmployees } from '../hooks/useEmployees'
 import type { Employee, EmployeeInput } from '../hooks/useEmployees'
 import { useServices } from '../hooks/useServices'
 import type { Service } from '../hooks/useServices'
+import RentabilidadPanel from '../components/equipo/RentabilidadPanel'
 import { serviceColor } from '../lib/colors'
 import { DAYS, DAY_LABELS, useBusinessContext } from '../context/BusinessContext'
 import type { Day, DayHours, AgendaMode, AssignmentMode } from '../context/BusinessContext'
@@ -23,6 +24,7 @@ export default function Equipo() {
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Employee | null>(null)
+  const [tab, setTab] = useState<'equipo' | 'rentabilidad'>('equipo')
 
   const cfg = business.agenda_config
 
@@ -58,6 +60,16 @@ export default function Equipo() {
         </div>
       </div>
 
+      {/* Pestañas */}
+      <div className="team-tabs">
+        <button className={`team-tab${tab === 'equipo' ? ' active' : ''}`} onClick={() => setTab('equipo')}>Equipo</button>
+        <button className={`team-tab${tab === 'rentabilidad' ? ' active' : ''}`} onClick={() => setTab('rentabilidad')}>Rentabilidad</button>
+      </div>
+
+      {tab === 'rentabilidad' ? (
+        <RentabilidadPanel employees={employees} />
+      ) : (
+      <>
       {/* ── Configuración del modo de agenda ── */}
       <div className="card" style={{ marginBottom: 18 }}>
         <div className="card-h"><h3>Cómo se dan los turnos</h3></div>
@@ -190,6 +202,8 @@ export default function Equipo() {
           </div>
         )}
       </div>
+      </>
+      )}
 
       {formOpen && (
         <EmployeeForm

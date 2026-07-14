@@ -1408,6 +1408,68 @@ h1,h2,h3,h4,h5,.disp {
 .team-color-dot.sel { border-color: var(--ink); transform: scale(1.12); }
 .team-hours { max-height: 320px; overflow-y: auto; }
 
+/* ── Pestañas Equipo / Rentabilidad ── */
+.team-tabs { display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+.team-tab {
+  padding: 10px 4px; margin-bottom: -1px; background: none; border: none; cursor: pointer;
+  font-size: 14px; font-weight: 600; color: var(--ink-faint); font-family: 'Space Grotesk', sans-serif;
+  border-bottom: 2px solid transparent; margin-right: 18px;
+}
+.team-tab.active { color: var(--volt-ink); border-bottom-color: var(--volt); }
+
+/* ── Rentabilidad por empleado ── */
+.rent-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.rent-paid-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+.rent-paid-toggle input { width: 15px; height: 15px; accent-color: var(--volt); cursor: pointer; }
+
+.rent-bars { display: flex; flex-direction: column; gap: 11px; margin-top: 14px; }
+.rent-bar-row { display: flex; align-items: center; gap: 12px; }
+.rent-bar-name { width: 120px; flex-shrink: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rent-bar-track { flex: 1; height: 10px; background: var(--surf-2); border-radius: 6px; overflow: hidden; }
+.rent-bar-fill { height: 100%; border-radius: 6px; transition: width .3s; }
+.rent-bar-val { width: 92px; flex-shrink: 0; text-align: right; font-size: 12.5px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; }
+
+.rent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.rent-card { background: var(--surf); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+.rent-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.rent-card-name { font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; }
+.rent-inactive { color: var(--ink-faint); font-weight: 500; font-size: 12px; }
+.rent-empty { color: var(--ink-faint); font-size: 13px; text-align: center; padding: 14px 0; }
+.rent-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rent-metric {
+  display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 11px;
+  background: var(--surf-2); border: none; cursor: pointer; text-align: left; transition: all .12s;
+}
+.rent-metric:hover { background: var(--volt-wash); }
+.rent-metric-lbl { font-size: 11px; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .03em; }
+.rent-metric-val { font-size: 16px; font-weight: 800; font-family: 'Space Grotesk', sans-serif; }
+.rent-metric-val.up { color: var(--mint); }
+.rent-metric-val.down { color: var(--rose); }
+.rent-result { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; font-weight: 600; }
+.rent-result b { font-family: 'Space Grotesk', sans-serif; font-size: 16px; }
+.rent-sub { font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+
+.rent-unassigned { margin-top: 16px; }
+.rent-unassigned-row { display: flex; flex-wrap: wrap; gap: 30px; margin-top: 12px; }
+
+.rent-drill-list { max-height: 340px; overflow-y: auto; margin: 6px 0 4px; }
+.rent-drill-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.rent-drill-item:last-child { border-bottom: none; }
+.rent-drill-t { font-size: 13.5px; font-weight: 600; }
+.rent-drill-m { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+.rent-drill-amt { font-size: 13.5px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; white-space: nowrap; }
+.rent-drill-amt.up { color: var(--mint); }
+.rent-drill-amt.down { color: var(--rose); }
+.rent-drill-total { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--line); font-size: 14px; font-weight: 700; }
+.rent-drill-total b { font-family: 'Space Grotesk', sans-serif; font-size: 17px; }
+
+@media (max-width: 768px) {
+  .rent-controls { flex-direction: column; align-items: stretch; }
+  .rent-bar-name { width: 84px; font-size: 12px; }
+  .rent-bar-val { width: 76px; font-size: 11.5px; }
+  .rent-unassigned-row { gap: 20px; }
+}
+
 .team-svc-pick { margin-top: 10px; }
 .team-svc-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .team-svc-chip {
