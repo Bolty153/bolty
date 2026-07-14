@@ -971,6 +971,7 @@ h1,h2,h3,h4,h5,.disp {
 .lp-channel-chip.wapp { background: #e3f9ee; color: #0b7a4f; }
 .lp-channel-chip.insta { background: #fce8f8; color: #9b37b5; }
 .lp-channel-chip.web { background: var(--volt-wash); color: var(--volt-ink); }
+.lp-channel-chip.mail { background: var(--amber-wash); color: #a36000; }
 .lp-lang-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .lp-lang-pill {
   background: var(--surf-2); border: 1px solid var(--line-2); border-radius: 24px;
@@ -1326,6 +1327,99 @@ h1,h2,h3,h4,h5,.disp {
 .prod-actions button:hover { background: var(--surf-2); }
 .prod-actions button.danger:hover { background: var(--rose-wash); color: var(--rose); border-color: var(--rose); }
 
+/* ── Equipo (capacidad y empleados) ── */
+.team-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.team-mode-card {
+  text-align: left; background: var(--surf); border: 1.5px solid var(--line-2); border-radius: 14px;
+  padding: 16px; cursor: pointer; transition: all .15s; font-family: inherit;
+}
+.team-mode-card:hover { border-color: var(--volt); }
+.team-mode-card.sel { border-color: var(--volt); background: var(--volt-wash); box-shadow: 0 0 0 3px rgba(96,41,255,.1); }
+.team-mode-ic {
+  width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center;
+  background: var(--surf-2); color: var(--ink-2); margin-bottom: 12px;
+}
+.team-mode-card.sel .team-mode-ic { background: #fff; color: var(--volt); }
+.team-mode-t { font-size: 14.5px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; letter-spacing: -.01em; margin-bottom: 5px; }
+.team-mode-d { font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; }
+
+.team-cap-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  margin-top: 16px; padding: 14px 16px; background: var(--surf-2); border-radius: 12px;
+}
+.team-cap-lbl { font-size: 14px; font-weight: 600; }
+.team-stepper { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.team-stepper button {
+  width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line-2);
+  background: var(--surf); color: var(--ink-2); font-size: 20px; font-weight: 700;
+  cursor: pointer; line-height: 1; transition: all .12s;
+}
+.team-stepper button:hover:not(:disabled) { border-color: var(--volt); color: var(--volt); background: var(--volt-wash); }
+.team-stepper button:disabled { opacity: .4; cursor: not-allowed; }
+.team-stepper span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; min-width: 24px; text-align: center; }
+
+.team-assign { margin-top: 16px; }
+.team-assign-list { display: flex; flex-direction: column; gap: 8px; }
+.team-assign-opt {
+  display: flex; align-items: flex-start; gap: 11px; padding: 13px 15px;
+  border: 1.5px solid var(--line-2); border-radius: 12px; cursor: pointer; transition: all .15s;
+}
+.team-assign-opt:hover { border-color: var(--volt); }
+.team-assign-opt.sel { border-color: var(--volt); background: var(--volt-wash); }
+.team-assign-opt input { margin-top: 2px; width: 16px; height: 16px; accent-color: var(--volt); cursor: pointer; flex-shrink: 0; }
+.team-assign-t { font-size: 13.5px; font-weight: 600; }
+.team-assign-d { font-size: 12px; color: var(--ink-soft); line-height: 1.45; margin-top: 2px; }
+.team-overlap {
+  display: flex; align-items: flex-start; gap: 11px; margin-top: 14px;
+  padding-top: 14px; border-top: 1px solid var(--line); cursor: pointer;
+}
+.team-overlap input { margin-top: 2px; width: 16px; height: 16px; accent-color: var(--volt); cursor: pointer; flex-shrink: 0; }
+
+.team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 16px; }
+.team-card {
+  display: flex; align-items: center; gap: 13px; background: var(--surf);
+  border: 1px solid var(--line); border-radius: var(--rl); padding: 14px; transition: all .2s;
+}
+.team-card:hover { box-shadow: var(--sh-m); transform: translateY(-2px); }
+.team-av {
+  width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: .02em;
+}
+.team-info { flex: 1; min-width: 0; }
+.team-name { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; }
+.team-role { font-size: 12.5px; color: var(--ink-soft); margin-top: 1px; }
+.team-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.team-tag { font-size: 10.5px; font-weight: 600; background: var(--surf-2); color: var(--ink-faint); padding: 3px 8px; border-radius: 7px; }
+.team-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.team-actions button {
+  padding: 6px 12px; border-radius: 9px; border: 1px solid var(--line-2);
+  background: var(--surf); color: var(--ink-2); font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: 'Space Grotesk', sans-serif; transition: all .12s;
+}
+.team-actions button:hover { background: var(--surf-2); }
+.team-actions button.danger:hover { background: var(--rose-wash); color: var(--rose); border-color: var(--rose); }
+
+.team-color-row { display: flex; flex-wrap: wrap; gap: 9px; }
+.team-color-dot {
+  width: 30px; height: 30px; border-radius: 50%; cursor: pointer; padding: 0;
+  border: 2px solid transparent; transition: all .12s;
+}
+.team-color-dot.sel { border-color: var(--ink); transform: scale(1.12); }
+.team-hours { max-height: 320px; overflow-y: auto; }
+
+.team-svc-pick { margin-top: 10px; }
+.team-svc-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.team-svc-chip {
+  display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px;
+  border: 1.5px solid var(--line-2); border-radius: 20px; background: var(--surf);
+  color: var(--ink-2); font-size: 12.5px; font-weight: 600; cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif; transition: all .12s;
+}
+.team-svc-chip:hover { border-color: var(--volt); }
+.team-svc-chip.sel { border-color: var(--volt); background: var(--volt-wash); color: var(--volt-ink); }
+.team-svc-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
 /* Acciones de modal */
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
 
@@ -1602,6 +1696,28 @@ h1,h2,h3,h4,h5,.disp {
   font-size: 14px; font-weight: 800; line-height: 1; cursor: pointer; transition: all .12s;
 }
 .daycal-appt-pay:hover { background: var(--mint-wash); color: #0b7a4f; }
+
+/* Encabezados de columna por empleado (modo por empleado) */
+.daycal-heads { display: flex; gap: 4px; padding: 0 6px 8px 52px; }
+.daycal-head {
+  flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 6px 4px; background: var(--surf-2); border-radius: 9px;
+}
+.daycal-head-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.daycal-head-lbl {
+  font-size: 12px; font-weight: 700; font-family: 'Space Grotesk', sans-serif;
+  color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Selector de empleado y aviso blando en el alta de turno */
+.appt-emp-select {
+  width: 100%; padding: 11px 13px; border: 1px solid var(--line-2); border-radius: 11px;
+  background: var(--surf); color: var(--ink); font-size: 14px; font-family: inherit; cursor: pointer;
+}
+.appt-warn {
+  background: var(--amber-wash); color: #a36000; border-radius: 11px;
+  padding: 11px 14px; font-size: 13px; font-weight: 500; line-height: 1.5;
+}
 
 /* Modal de confirmación */
 .confirm-box { max-width: 420px; text-align: center; }
@@ -2145,6 +2261,11 @@ h1,h2,h3,h4,h5,.disp {
   .cal-week { gap: 4px; }
   .daycal-appt-del, .daycal-appt-pay { width: 26px; height: 26px; }
   .daycal-appt-pay { right: 34px; }
+
+  /* --- Equipo: modo y tarjetas a 1 columna --- */
+  .team-mode-grid { grid-template-columns: 1fr; }
+  .team-grid { grid-template-columns: 1fr; }
+  .team-cap-row { flex-direction: column; align-items: stretch; gap: 12px; }
 
   /* --- Finanzas: gráficos apilados, movimientos como tarjetas --- */
   .fin-period { gap: 8px; }

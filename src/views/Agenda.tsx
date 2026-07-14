@@ -3,7 +3,10 @@ import type { ViewFocus } from '../App'
 import { useAppointments } from '../hooks/useAppointments'
 import type { Appointment, AppointmentInput } from '../hooks/useAppointments'
 import { useServices, fmtDuration } from '../hooks/useServices'
+import { useEmployees } from '../hooks/useEmployees'
+import type { Employee } from '../hooks/useEmployees'
 import { useBusinessContext } from '../context/BusinessContext'
+import type { AgendaConfig, Day, DayHours } from '../context/BusinessContext'
 import { useCustomers } from '../hooks/useCustomers'
 import { useFinance } from '../hooks/useFinance'
 import { useBankAccounts } from '../hooks/useBankAccounts'
@@ -12,11 +15,15 @@ import TimePicker from '../components/TimePicker'
 import PaymentForm from '../components/finance/PaymentForm'
 import { serviceColor } from '../lib/colors'
 import { initPhone, cleanPhone } from '../lib/phone'
+import {
+  timeToMin as tMin, employeeStatus, overlapCount, packLanes,
+  type EmpStatus, type SlotCtx,
+} from '../lib/availability'
 
 const fmtPrice = (n: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n || 0)
 
-interface SvcOpt { name: string; duration: number | null; price: number; on_request: boolean }
+interface SvcOpt { id: string; name: string; duration: number | null; price: number; on_request: boolean }
 
 const timeToMin = (t: string) => { const [h, m] = t.split(':').map(Number); return (h || 0) * 60 + (m || 0) }
 const minToTime = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
@@ -46,15 +53,26 @@ const fmtShort = (d: Date) => new Intl.DateTimeFormat('es-AR', { day: 'numeric',
 export default function Agenda({ focus }: { focus?: ViewFocus }) {
   const { appointments, loading, addAppointment, updateAppointment, deleteAppointment } = useAppointments()
   const { services } = useServices()
+  const { employees, serviceMap } = useEmployees()
   const { customers, upsertFromAppointment } = useCustomers()
   const { business } = useBusinessContext()
   const { addPayment } = useFinance()
   const { accounts, addAccount } = useBankAccounts()
 
+  const cfg = business.agenda_config
+  const staffMode = cfg.mode === 'staff' && employees.length > 0
+
   const svcOpts: SvcOpt[] = useMemo(
-    () => services.map(s => ({ name: s.name, duration: s.duration_min, price: s.price, on_request: s.price_on_request })),
+    () => services.map(s => ({ id: s.id, name: s.name, duration: s.duration_min, price: s.price, on_request: s.price_on_request })),
     [services]
   )
+
+  const activeEmployees = useMemo(() => employees.filter(e => e.active), [employees])
+  const employeeById = useMemo(() => {
+    const m: Record<string, Employee> = {}
+    employees.forEach(e => { m[e.id] = e })
+    return m
+  }, [employees])
 
   const today = useMemo(() => { const t = new Date(); t.setHours(0, 0, 0, 0); return t }, [])
   const [ref, setRef] = useState<Date>(today)
@@ -62,6 +80,7 @@ export default function Agenda({ focus }: { focus?: ViewFocus }) {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Appointment | null>(null)
   const [presetTime, setPresetTime] = useState('')
+  const [presetEmp, setPresetEmp] = useState<string | null>(null)
   const [toCancel, setToCancel] = useState<Appointment | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [payFor, setPayFor] = useState<Appointment | null>(null)
@@ -97,9 +116,9 @@ export default function Agenda({ focus }: { focus?: ViewFocus }) {
   function shiftWeek(n: number) { setRef(addDays(ref, n * 7)); setSelected(addDays(selected, n * 7)) }
   function goToday() { setRef(today); setSelected(today) }
 
-  function openAdd() { setEditing(null); setPresetTime(''); setFormOpen(true) }
-  function openAddAt(min: number) { setEditing(null); setPresetTime(minToTime(min)); setFormOpen(true) }
-  function openEdit(a: Appointment) { setEditing(a); setPresetTime(''); setFormOpen(true) }
+  function openAdd() { setEditing(null); setPresetTime(''); setPresetEmp(null); setFormOpen(true) }
+  function openAddAt(min: number, emp: string | null = null) { setEditing(null); setPresetTime(minToTime(min)); setPresetEmp(emp); setFormOpen(true) }
+  function openEdit(a: Appointment) { setEditing(a); setPresetTime(''); setPresetEmp(null); setFormOpen(true) }
 
   // Rango de horas de la grilla del día: arranca con tus horarios de atención
   // y se estira si hay turnos antes o después de ese rango.
@@ -125,7 +144,58 @@ export default function Agenda({ focus }: { focus?: ViewFocus }) {
   const gridHeight = (endH - startH) * HOUR_H
   const calRef = useRef<HTMLDivElement>(null)
 
-  // Clic en una zona libre de la grilla: agenda en esa hora (redondeada a 15 min)
+  // Reparto en columnas del día. Cada turno recibe { i, j, k }: i = columna
+  // principal (empleado, o sub-columna del packing), k = cuántas sub-columnas
+  // tiene esa columna, j = cuál ocupa. En modo por empleado hay una columna por
+  // persona (+ "Sin asignar"), y dentro de cada una se sub-reparte si hay
+  // solapamientos (sólo pasa si se permite superponer). Sin empleados es el
+  // packing greedy de siempre: con capacidad 1 y sin solapes queda idéntico.
+  const NONE_LANE = '__none__'
+  const start = (a: Appointment) => tMin(a.appt_time)
+  const end = (a: Appointment) => tMin(a.appt_time) + (a.duration_min ?? 30)
+  const layout = useMemo(() => {
+    const pos: Record<string, { i: number; j: number; k: number }> = {}
+    if (staffMode) {
+      const lanes: { key: string; label: string; color: string | null }[] =
+        activeEmployees.map(e => ({ key: e.id, label: e.name, color: e.color }))
+      const usesNone = dayAppts.some(a => !a.employee_id || !employeeById[a.employee_id]?.active)
+      if (usesNone) lanes.push({ key: NONE_LANE, label: 'Sin asignar', color: null })
+      const idx: Record<string, number> = {}
+      lanes.forEach((l, i) => { idx[l.key] = i })
+      // Turnos agrupados por columna, y dentro de cada columna packing propio.
+      const byLane: Record<string, Appointment[]> = {}
+      dayAppts.forEach(a => {
+        const key = (a.employee_id && employeeById[a.employee_id]?.active) ? a.employee_id : NONE_LANE
+        ;(byLane[key] ??= []).push(a)
+      })
+      lanes.forEach(l => {
+        const group = byLane[l.key] ?? []
+        const { lanes: subOf, laneCount: k } = packLanes(group.map(a => ({ id: a.id, startMin: start(a), endMin: end(a) })))
+        group.forEach(a => { pos[a.id] = { i: idx[l.key], j: subOf[a.id] ?? 0, k } })
+      })
+      return { lanes, pos, laneCount: Math.max(1, lanes.length) }
+    }
+    const { lanes: laneOf, laneCount } = packLanes(dayAppts.map(a => ({ id: a.id, startMin: start(a), endMin: end(a) })))
+    dayAppts.forEach(a => { pos[a.id] = { i: laneOf[a.id] ?? 0, j: 0, k: 1 } })
+    return { lanes: null as null | { key: string; label: string; color: string | null }[], pos, laneCount }
+  }, [staffMode, activeEmployees, dayAppts, employeeById])
+
+  // Estilo de columna para un turno. Con una sola columna y sin sub-división
+  // dejamos el ancho completo del CSS (mismo desktop de antes).
+  function laneStyle(id: string): React.CSSProperties {
+    const N = layout.laneCount
+    const p = layout.pos[id] ?? { i: 0, j: 0, k: 1 }
+    if (N <= 1 && p.k <= 1) return {}
+    const frac = p.i + p.j / p.k          // posición en unidades de columna principal
+    return {
+      left: `calc(52px + (100% - 58px) * ${frac} / ${N})`,
+      width: `calc((100% - 58px) / ${N} / ${p.k} - 4px)`,
+      right: 'auto',
+    }
+  }
+
+  // Clic en una zona libre de la grilla: agenda en esa hora (redondeada a 15 min).
+  // En modo por empleado, además detecta en qué columna clickeaste para preseleccionar a la persona.
   function onGridClick(e: React.MouseEvent) {
     const rect = calRef.current?.getBoundingClientRect()
     if (!rect) return
@@ -133,7 +203,15 @@ export default function Agenda({ focus }: { focus?: ViewFocus }) {
     let min = startMin0 + y / PX_PER_MIN
     min = Math.round(min / 15) * 15
     min = Math.max(startMin0, Math.min((endH * 60) - 15, min))
-    openAddAt(min)
+    let emp: string | null = null
+    if (staffMode && layout.lanes) {
+      const area = rect.width - 58        // descuenta gutter de horas (52) + margen derecho (6)
+      const rel = e.clientX - rect.left - 52
+      const i = Math.max(0, Math.min(layout.lanes.length - 1, Math.floor((rel / area) * layout.lanes.length)))
+      const key = layout.lanes[i]?.key
+      emp = key && key !== NONE_LANE ? key : null
+    }
+    openAddAt(min, emp)
   }
 
   async function confirmCancel() {
@@ -198,7 +276,26 @@ export default function Agenda({ focus }: { focus?: ViewFocus }) {
           <div style={{ padding: '30px 0', color: 'var(--ink-faint)', fontSize: 14, textAlign: 'center' }}>Cargando…</div>
         ) : (
           <>
-            <div className="daycal-hint">Tocá un espacio libre para agendar un turno en ese horario.</div>
+            <div className="daycal-hint">
+              {staffMode
+                ? 'Cada columna es una persona de tu equipo. Tocá un espacio libre para agendar en ese horario.'
+                : cfg.mode === 'simple' && cfg.capacity > 1
+                  ? `Podés dar hasta ${cfg.capacity} turnos por horario. Tocá un espacio libre para agendar.`
+                  : 'Tocá un espacio libre para agendar un turno en ese horario.'}
+            </div>
+
+            {/* Encabezados de columna por empleado (modo por empleado) */}
+            {staffMode && layout.lanes && (
+              <div className="daycal-heads">
+                {layout.lanes.map(l => (
+                  <div key={l.key} className="daycal-head">
+                    <span className="daycal-head-dot" style={{ background: l.color || 'var(--line-2)' }} />
+                    <span className="daycal-head-lbl">{l.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="daycal" style={{ height: gridHeight }} ref={calRef} onClick={onGridClick}>
               {/* Líneas de hora */}
               {Array.from({ length: endH - startH + 1 }, (_, i) => startH + i).map(h => (
@@ -212,7 +309,9 @@ export default function Agenda({ focus }: { focus?: ViewFocus }) {
                 const top = (timeToMin(a.appt_time) - startMin0) * PX_PER_MIN
                 const dur = a.duration_min ?? 30
                 const height = Math.max(dur * PX_PER_MIN - 3, 20)
-                const color = serviceColor(a.service_name)
+                const emp = a.employee_id ? employeeById[a.employee_id] : null
+                // En modo por empleado el color lo da la persona; si no, el servicio.
+                const color = staffMode && emp?.color ? emp.color : serviceColor(a.service_name)
                 const hasColor = color.startsWith('#')
                 const compact = height < 52
                 return (
@@ -223,6 +322,7 @@ export default function Agenda({ focus }: { focus?: ViewFocus }) {
                       top, height,
                       background: hasColor ? color + '1f' : 'var(--surf-2)',
                       borderLeft: `4px solid ${hasColor ? color : 'var(--line-2)'}`,
+                      ...laneStyle(a.id),
                     }}
                     onClick={e => { e.stopPropagation(); openEdit(a) }}
                   >
@@ -235,6 +335,7 @@ export default function Agenda({ focus }: { focus?: ViewFocus }) {
                       {!compact && (
                         <div className="daycal-appt-meta">
                           {a.service_name && <span>{a.service_name}</span>}
+                          {!staffMode && emp && <span>· {emp.name}</span>}
                           {a.price != null && <span>· {fmtPrice(a.price)}</span>}
                           {a.phone && <span>· {a.phone}</span>}
                           {a.source !== 'manual' && <span className="appt-src">· {a.source}</span>}
@@ -269,8 +370,15 @@ export default function Agenda({ focus }: { focus?: ViewFocus }) {
           appointment={editing}
           defaultDate={selectedKey}
           defaultTime={presetTime}
+          defaultEmployee={presetEmp}
           services={svcOpts}
           customers={customers.map(c => ({ name: c.name, phone: c.phone }))}
+          staffMode={staffMode}
+          config={cfg}
+          employees={activeEmployees}
+          serviceMap={serviceMap}
+          businessHours={business.business_hours}
+          appointments={appointments}
           onClose={() => setFormOpen(false)}
           onSave={async (input, saveCustomer) => {
             if (editing) await updateAppointment(editing.id, input)
@@ -328,40 +436,117 @@ export default function Agenda({ focus }: { focus?: ViewFocus }) {
 }
 
 /* ───────────── Alta / edición de turno ───────────── */
+const AUTO = '__auto__'          // asignación automática (elige uno libre)
+const STATUS_TXT: Record<EmpStatus, string> = { free: 'libre', busy: 'ocupado', off: 'no trabaja', cant: 'no hace ese servicio' }
+
 function AppointmentForm({
-  appointment, defaultDate, defaultTime, services, customers, onClose, onSave,
+  appointment, defaultDate, defaultTime, defaultEmployee, services, customers,
+  staffMode, config, employees, serviceMap, businessHours, appointments,
+  onClose, onSave,
 }: {
   appointment: Appointment | null
   defaultDate: string
   defaultTime: string
+  defaultEmployee: string | null
   services: SvcOpt[]
   customers: { name: string; phone: string | null }[]
+  staffMode: boolean
+  config: AgendaConfig
+  employees: Employee[]
+  serviceMap: Record<string, string[]>
+  businessHours: Record<Day, DayHours>
+  appointments: Appointment[]
   onClose: () => void
   onSave: (input: AppointmentInput, saveCustomer: boolean) => Promise<void>
 }) {
   const [customer, setCustomer] = useState(appointment?.customer_name ?? '')
   const [serviceName, setServiceName] = useState(appointment?.service_name ?? '')
+  const [serviceId, setServiceId] = useState<string | null>(appointment?.service_id ?? null)
   const [date, setDate] = useState(appointment?.appt_date ?? defaultDate)
   const [time, setTime] = useState(appointment?.appt_time ?? defaultTime)
   const [duration, setDuration] = useState(appointment?.duration_min ? String(appointment.duration_min) : '')
   const [price, setPrice] = useState(appointment?.price != null ? String(appointment.price) : '')
   const [phone, setPhone] = useState(initPhone(appointment?.phone))
   const [notes, setNotes] = useState(appointment?.notes ?? '')
+  // Empleado elegido: '' = sin asignar, AUTO = automático, o el id de la persona.
+  const [employee, setEmployee] = useState<string>(
+    appointment?.employee_id ?? defaultEmployee ?? (config.assignment === 'auto' ? AUTO : '')
+  )
   const [saveCustomer, setSaveCustomer] = useState(true)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
-  // Al elegir un servicio de la lista, completa duración y precio automáticamente.
+  // Al elegir un servicio de la lista, completa duración y precio, y fija el id
+  // (que sirve para saber qué empleados lo hacen).
   function pickService(s: SvcOpt) {
+    setServiceId(s.id)
     setDuration(s.duration ? String(s.duration) : '')
     setPrice(s.on_request ? '' : String(s.price))
   }
+  // Si escribe a mano, resolvemos el id por nombre exacto (o null si es libre).
+  function onServiceText(v: string) {
+    setServiceName(v)
+    setServiceId(services.find(s => s.name === v)?.id ?? null)
+  }
+
+  const effDur = (() => { const d = parseInt(duration, 10); return !isNaN(d) && d > 0 ? d : 30 })()
+
+  // En el alta manual el dueño puede elegir a CUALQUIER persona del equipo;
+  // al lado de cada una mostramos su estado (libre / ocupado / no trabaja /
+  // no hace ese servicio) para que decida con la info a la vista.
+  const candidates = useMemo(() => (staffMode ? employees : []), [staffMode, employees])
+  const statusMap = useMemo(() => {
+    const m: Record<string, EmpStatus> = {}
+    if (!staffMode || !date || !time) return m
+    const ctx: SlotCtx = {
+      businessHours, serviceMap, appts: appointments, dayDate: date,
+      startMin: tMin(time), durMin: effDur, serviceId, excludeId: appointment?.id,
+    }
+    candidates.forEach(e => { m[e.id] = employeeStatus(e, ctx) })
+    return m
+  }, [staffMode, date, time, effDur, serviceId, candidates, appointments, businessHours, serviceMap, appointment?.id])
+
+  // Bloqueo duro: por defecto una persona no puede tener dos turnos a la misma
+  // hora. Se puede permitir desde Equipo ("permitir superponer").
+  const block = useMemo(() => {
+    if (!staffMode || config.allow_overlap) return null
+    if (!employee || employee === AUTO) return null
+    if (statusMap[employee] === 'busy') {
+      return 'Esa persona ya tiene un turno a esa hora. Cambiá el horario o la persona (o activá "permitir superponer" en Equipo).'
+    }
+    return null
+  }, [staffMode, config.allow_overlap, employee, statusMap])
+
+  // Aviso blando (no bloquea): sobrecupo, persona que no trabaja o que no hace ese servicio.
+  const warn = useMemo(() => {
+    if (!date || !time) return null
+    if (!staffMode) {
+      if (config.mode === 'simple' && config.capacity > 0) {
+        const n = overlapCount(appointments, date, tMin(time), effDur, appointment?.id)
+        if (n >= config.capacity) return `Ya hay ${n} turno${n === 1 ? '' : 's'} a esa hora y tu cupo es de ${config.capacity}. Podés guardarlo igual.`
+      }
+      return null
+    }
+    if (employee === AUTO) {
+      const anyFree = candidates.some(e => statusMap[e.id] === 'free')
+      if (!anyFree) return 'No hay nadie libre para ese servicio a esa hora. Si guardás, el turno queda sin asignar.'
+      return null
+    }
+    if (employee) {
+      const st = statusMap[employee]
+      if (st === 'busy' && config.allow_overlap) return 'Esa persona ya tiene un turno a esa hora. Podés guardarlo igual.'
+      if (st === 'off') return 'Esa persona no trabaja ese día u horario. Podés guardarlo igual.'
+      if (st === 'cant') return 'Esa persona no tiene marcado ese servicio. Podés guardarlo igual.'
+    }
+    return null
+  }, [staffMode, config, employee, statusMap, candidates, appointments, date, time, effDur, appointment?.id])
 
   async function submit() {
     setErr(null)
     if (!customer.trim()) return setErr('El nombre del cliente es obligatorio.')
     if (!date) return setErr('Elegí una fecha.')
     if (!time) return setErr('Elegí una hora.')
+    if (block) return setErr(block)
     let durationMin: number | null = null
     if (duration.trim() !== '') {
       const d = parseInt(duration, 10)
@@ -374,11 +559,20 @@ function AppointmentForm({
       if (isNaN(p) || p < 0) return setErr('El precio tiene que ser un número válido.')
       priceNum = p
     }
+    // Resolución del empleado: en automático elegimos al primero libre; si no
+    // hay ninguno, el turno queda sin asignar (el dueño lo ve después).
+    let employeeId: string | null = null
+    if (staffMode) {
+      if (employee === AUTO) employeeId = candidates.find(e => statusMap[e.id] === 'free')?.id ?? null
+      else employeeId = employee || null
+    }
     setSaving(true)
     try {
       await onSave({
         customer_name: customer.trim(),
         service_name: serviceName.trim() || null,
+        service_id: serviceId,
+        employee_id: employeeId,
         appt_date: date,
         appt_time: time,
         duration_min: durationMin,
@@ -416,7 +610,7 @@ function AppointmentForm({
           <label>Servicio (opcional)</label>
           <Combobox
             value={serviceName}
-            onChange={setServiceName}
+            onChange={onServiceText}
             items={services}
             getLabel={s => s.name}
             getColor={s => serviceColor(s.name)}
@@ -428,6 +622,27 @@ function AppointmentForm({
             placeholder="Ej: Lavado completo"
           />
         </div>
+
+        {staffMode && (
+          <div className="field">
+            <label>¿Con quién?</label>
+            <select className="appt-emp-select" value={employee} onChange={e => setEmployee(e.target.value)}>
+              <option value="">Sin asignar</option>
+              <option value={AUTO}>Automático — asignar a alguien libre</option>
+              {candidates.map(e => {
+                const st = statusMap[e.id]
+                return (
+                  <option key={e.id} value={e.id}>
+                    {e.name}{st && st !== 'free' ? ` · ${STATUS_TXT[st]}` : (st === 'free' ? ' · libre' : '')}
+                  </option>
+                )
+              })}
+            </select>
+            {candidates.length === 0 && (
+              <div className="hint">Todavía no cargaste a nadie en tu equipo. Sumalos en la sección Equipo.</div>
+            )}
+          </div>
+        )}
 
         <div className="field-row-2" style={{ display: 'grid', gap: 12 }}>
           <div className="field">
@@ -466,11 +681,13 @@ function AppointmentForm({
           Guardar como cliente (recordar su teléfono para la próxima)
         </label>
 
-        {err && <div className="onb-error" style={{ marginTop: 12 }}>{err}</div>}
+        {block && <div className="onb-error" style={{ marginTop: 12 }}>{block}</div>}
+        {!block && warn && <div className="appt-warn" style={{ marginTop: 12 }}>{warn}</div>}
+        {err && !block && <div className="onb-error" style={{ marginTop: 12 }}>{err}</div>}
 
         <div className="modal-actions">
           <button className="btn-outline" type="button" onClick={onClose} disabled={saving}>Cancelar</button>
-          <button className="btn" type="button" onClick={submit} disabled={saving}>
+          <button className="btn" type="button" onClick={submit} disabled={saving || !!block}>
             {saving ? 'Guardando…' : (appointment ? 'Guardar cambios' : 'Agendar turno')}
           </button>
         </div>

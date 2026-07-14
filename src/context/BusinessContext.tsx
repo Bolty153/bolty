@@ -14,6 +14,21 @@ export interface DayHours {
 export const DAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'] as const
 export type Day = typeof DAYS[number]
 
+// ── Configuración de la agenda (capacidad y equipo) ──
+// mode 'simple'  → capacidad sin nombres: cuántos turnos por horario (capacity)
+// mode 'staff'   → empleados nombrados; assignment define quién elige con quién
+export type AgendaMode = 'simple' | 'staff'
+export type AssignmentMode = 'client' | 'auto' | 'unassigned'
+export interface AgendaConfig {
+  mode: AgendaMode
+  capacity: number
+  assignment: AssignmentMode
+  // Por defecto una persona no puede tener dos turnos a la misma hora.
+  // Si se activa, se permite superponer (algunos negocios lo necesitan).
+  allow_overlap: boolean
+}
+export const DEFAULT_AGENDA_CONFIG: AgendaConfig = { mode: 'simple', capacity: 1, assignment: 'unassigned', allow_overlap: false }
+
 export const DAY_LABELS: Record<Day, string> = {
   lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles',
   jueves: 'Jueves', viernes: 'Viernes', sabado: 'Sábado', domingo: 'Domingo',
@@ -39,6 +54,7 @@ export interface BusinessProfile {
   phone: string
   logo_url: string | null
   business_hours: Record<Day, DayHours>
+  agenda_config: AgendaConfig
   onboarding_complete: boolean
   plan: string
 }
@@ -61,6 +77,7 @@ const DEFAULT_BUSINESS: BusinessProfile = {
   phone: '',
   logo_url: null,
   business_hours: DEFAULT_HOURS,
+  agenda_config: DEFAULT_AGENDA_CONFIG,
   onboarding_complete: false,
   plan: 'basico',
 }
@@ -144,6 +161,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
           ...DEFAULT_BUSINESS,
           ...bpRes.data,
           business_hours: bpRes.data.business_hours ?? DEFAULT_HOURS,
+          agenda_config: { ...DEFAULT_AGENDA_CONFIG, ...(bpRes.data.agenda_config ?? {}) },
         })
       }
       if (acRes.data) {
@@ -170,7 +188,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
         .select()
         .single()
       if (error) throw error
-      setBusiness({ ...DEFAULT_BUSINESS, ...row, business_hours: row.business_hours ?? DEFAULT_HOURS })
+      setBusiness({ ...DEFAULT_BUSINESS, ...row, business_hours: row.business_hours ?? DEFAULT_HOURS, agenda_config: { ...DEFAULT_AGENDA_CONFIG, ...(row.agenda_config ?? {}) } })
     } catch (e) {
       console.error('[Bolty] saveBusiness:', (e as Error).message)
       throw e
@@ -220,7 +238,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       ])
       if (bpRes.error) throw bpRes.error
       if (acRes.error) throw acRes.error
-      setBusiness({ ...DEFAULT_BUSINESS, ...bpRes.data, business_hours: bpRes.data.business_hours ?? DEFAULT_HOURS })
+      setBusiness({ ...DEFAULT_BUSINESS, ...bpRes.data, business_hours: bpRes.data.business_hours ?? DEFAULT_HOURS, agenda_config: { ...DEFAULT_AGENDA_CONFIG, ...(bpRes.data.agenda_config ?? {}) } })
       setAgent({ ...DEFAULT_AGENT, ...acRes.data })
     } catch (e) {
       console.error('[Bolty] completeOnboarding:', (e as Error).message)

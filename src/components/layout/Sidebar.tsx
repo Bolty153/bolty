@@ -126,6 +126,18 @@ const agendaNav: NavItemDef = {
   ),
 }
 
+const equipoNav: NavItemDef = {
+  id: 'equipo',
+  label: 'Equipo',
+  icon: (
+    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+    </svg>
+  ),
+}
+
 const canalesNav: NavItemDef = {
   id: 'canales',
   label: 'Canales',
@@ -144,8 +156,8 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
   ]
   const fullMainNav: NavItemDef[] = [mainNav[0], mainNav[1], ...catalogNav, ...mainNav.slice(2)]
 
-  // Canales se muestra siempre; Agenda sólo si el negocio trabaja con turnos.
-  const servicesNav: NavItemDef[] = showAgenda ? [agendaNav, canalesNav] : [canalesNav]
+  // Canales se muestra siempre; Agenda y Equipo sólo si el negocio trabaja con turnos.
+  const servicesNav: NavItemDef[] = showAgenda ? [agendaNav, equipoNav, canalesNav] : [canalesNav]
 
   const { business } = useBusinessContext()
   const { requestChange } = usePlanRequests()

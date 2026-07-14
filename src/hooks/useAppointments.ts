@@ -7,6 +7,8 @@ export interface Appointment {
   user_id?: string
   customer_name: string
   service_name: string | null
+  service_id: string | null   // servicio del catálogo (si se eligió uno); refuerza el match con el empleado
+  employee_id: string | null  // quién atiende (null = sin asignar)
   appt_date: string   // 'YYYY-MM-DD'
   appt_time: string   // 'HH:MM'
   duration_min: number | null
@@ -22,6 +24,8 @@ export interface Appointment {
 export interface AppointmentInput {
   customer_name: string
   service_name?: string | null
+  service_id?: string | null
+  employee_id?: string | null
   appt_date: string
   appt_time: string
   duration_min?: number | null

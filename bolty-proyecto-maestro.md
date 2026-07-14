@@ -7,7 +7,7 @@
 >
 > **Cómo usar este archivo:** al abrir un chat nuevo, subilo o pegalo y escribí *"Seguimos con Bolty. Acá está todo el proyecto. Leé y seguimos donde quedamos."*
 >
-> Última actualización: **11/07/2026**
+> Última actualización: **11/07/2026** (responsive mobile completo: dashboard, landing y panel admin)
 
 ---
 
@@ -54,7 +54,7 @@ El agente, cuando esté conectado al cerebro de IA (ver sección 6):
 ## 3. Lo que YA está construido (verificado contra el código, 11/07/2026)
 
 ### 3.1 Público / acceso
-- **Landing de marketing** (`Landing.tsx`, pública): 11 secciones — hero, el problema, la solución, cómo funciona, funciones destacadas, para quién es, por qué Bolty, planes (precios en "—" todavía), FAQ, CTA, footer. Animaciones al scroll. Mascota en la esquina. **Ya tiene responsive parcial** (breakpoints a 900px y 760px que reacomodan hero, stats, grids de funciones/planes/rubros y footer) — no está 100% pulido/probado en el celular real, pero **no es un pendiente desde cero** como decía un borrador anterior del resumen.
+- **Landing de marketing** (`Landing.tsx`, pública): 11 secciones — hero, el problema, la solución, cómo funciona, funciones destacadas, para quién es, por qué Bolty, planes (precios en "—" todavía), FAQ, CTA, footer. Animaciones al scroll. Mascota en la esquina (oculta en mobile). **Responsive mobile completo** (ver 3.4).
 - **Login + control de acceso manual:** registro/login con email y contraseña (Supabase Auth). El acceso lo activa manualmente el administrador. Pantalla de "acceso no activo" si no fue habilitado. Recuperación de contraseña por email. Ojito para mostrar/ocultar contraseña.
 - **Contraseña provisoria al crear cliente:** el admin genera o escribe una clave temporal; el cliente queda obligado a cambiarla en su primer ingreso (columna `must_change_password` en `profiles`, pantalla `ForcePasswordChange.tsx`).
 
@@ -64,7 +64,7 @@ El agente, cuando esté conectado al cerebro de IA (ver sección 6):
 - **Pedidos de cambio de plan:** el admin ve los pedidos de los clientes y aprueba el cambio real de plan.
 - **Soporte:** bandeja con pestañas (fallas / sugerencias / servicio a medida), estado pendiente/resuelto, teléfono del cliente, aviso (puntito) en el menú cuando hay pendientes.
 - **Modo soporte con permiso:** el admin pide acceso al panel de un cliente, el cliente lo autoriza desde una notificación real (no falsa) en su TopNav, queda un permiso de única vez con expiración (30 min), banner en vivo mientras el admin está adentro con botón de cortar, e historial de accesos (`support_access_requests`, `SupportAccessHistoryModal.tsx`).
-- **Responsive:** el panel admin **no tiene tratamiento mobile** — el sidebar (`.adm-side`) directamente desaparece a los 900px sin hamburguesa ni reemplazo. Es el pendiente responsive real (el admin lo usa siempre desde la computadora, así que es baja prioridad).
+- **Responsive mobile completo** (ver 3.4) — antes el sidebar (`.adm-side`) desaparecía a los 900px sin reemplazo; ya tiene hamburguesa + panel deslizante igual que el dashboard del cliente.
 
 ### 3.3 Dashboard del cliente (el negocio)
 - **Onboarding** en 3 pasos (negocio → horarios → agente), persiste en Supabase (`onboarding_complete`); no se repite al volver a entrar.
@@ -84,23 +84,27 @@ El agente, cuando esté conectado al cerebro de IA (ver sección 6):
 - **Ver planes / pedir cambio de plan:** modal con los 3 planes, marca el plan actual real, permite pedir el cambio (queda registrado y le llega al admin).
 - **Sidebar:** header fijo, nav con scroll propio, footer (upsell "Subí a Pro+") siempre visible sin desbordar.
 
-### 3.4 Responsive mobile del dashboard del cliente (hecho 11/07)
-Todo dentro de `@media (max-width: 768px)`, sin tocar ningún estilo de desktop:
-- **Sidebar** → menú hamburguesa (botón en la TopNav) con panel deslizante y overlay; se cierra al elegir sección o tocar afuera.
-- **Buscador** → barra inline debajo de la TopNav (no pantalla completa) con dropdown de resultados igual que en desktop, adaptado al ancho del celular.
-- **Avatar de la TopNav en mobile** → usa el logo del negocio si existe, o la inicial del nombre del negocio como respaldo (antes mostraba una inicial sacada de un dato viejo de la cuenta de usuario, sin relación con el negocio — ver nota abajo).
-- **Panel de notificaciones** → contenido dentro del viewport (antes se salía de pantalla).
-- **Botón de cerrar sesión** → con aire respecto del borde derecho.
-- **Tablas anchas** (Inventario, Finanzas/movimientos, Medios de pago/detalle de tarjeta) → tarjetas apiladas, legibles con el pulgar.
-- **Agenda** → ya mostraba un solo día con selector de fecha; se ajustaron espaciados y áreas táctiles.
-- **Gráficos de Finanzas** → apilados verticalmente en vez de lado a lado.
-- **Modales y formularios** → ancho completo, padding cómodo, botones grandes.
-- **KPIs de Inicio** → una columna.
+### 3.4 Responsive mobile — COMPLETO: dashboard, landing y panel admin (hecho 11/07)
+Las tres superficies de Bolty (dashboard del cliente, landing pública y panel admin) ya son responsive. Todo el trabajo está dentro de `@media (max-width: 768px)` o en clases nuevas ocultas por defecto — **cero cambios en desktop**, verificado en las tres comparando valores computados a 375px vs 1440px (sidebar, grillas, tablas, overflow, todo vuelve exacto a como estaba).
 
-> **Nota sobre el avatar "P":** ese dato salía de `session.user.user_metadata.name` (o el email), un campo que se graba **una sola vez, al crear la cuenta desde el panel admin**, y que queda totalmente desactualizado respecto del nombre real del negocio que se carga después en el onboarding (`business_profiles.business_name`). Es un dato "fantasma" — sigue existiendo en el avatar de escritorio (no se tocó, por pedido explícito de no cambiar nada del desktop), pero en mobile ya se reemplazó por el logo/inicial del negocio.
+**Patrones reutilizados en las tres partes:**
+- **Sidebar/menú → hamburguesa** con panel deslizante + overlay oscuro; se cierra al elegir sección o tocar afuera. El panel admin no tenía barra superior, así que se le agregó una topbar mobile nueva (oculta en desktop) solo para alojar el botón.
+- **Tablas y listas anchas → tarjetas apiladas**, con el nombre del campo como label arriba de cada valor (en el panel admin, las tablas reales usan `data-label` + `content: attr()` en CSS para mostrar el label sin tocar la tabla semántica de desktop).
+- **KPIs → 1 columna.** **Gráficos → apilados verticalmente**, sin desborde.
+- **Modales y formularios → ancho completo**, padding cómodo, botones grandes.
+- **Buscador global (dashboard cliente)** → barra inline debajo de la TopNav (no pantalla completa) con dropdown igual que en desktop, adaptado al ancho del celular.
+- **Agenda** → ya mostraba un solo día con selector de fecha; se ajustaron espaciados y áreas táctiles (no hizo falta rehacerla).
+
+**Fixes técnicos transversales (aplican a las tres superficies porque son reglas globales del mismo `index.css`):**
+- **Zoom automático de iOS resuelto de raíz:** Safari/iPhone agranda la pantalla solo al enfocar un `<input>` con `font-size` menor a 16px (pasaba, por ejemplo, al abrir "Agendar turno"). Se llevó **todo** input/select/textarea a `font-size: 16px` en mobile. **No se usó** `maximum-scale=1` ni `user-scalable=no` en el meta viewport (rompe la accesibilidad de zoom) — esa era la solución incorrecta y se descartó a propósito.
+- **Freno anti-desborde horizontal:** `html, body, #root` con `overflow-x: hidden` solo en mobile, para que nada quede "bailando" de costado pase lo que pase.
+- **Mascota Bolty oculta en mobile:** decisión de producto (no fix del PNG) — resolvió el bug del recuadro/fondo que se veía en el celular. Ver sección 2.
+- **Avatar de la TopNav (dashboard cliente) en mobile** → usa el logo del negocio si existe, o la inicial del nombre del negocio (antes mostraba una inicial sacada de `session.user.user_metadata.name`, un dato grabado una sola vez al crear la cuenta desde el panel admin y totalmente desactualizado respecto del negocio real — ese dato "fantasma" sigue en el avatar de desktop, que no se tocó a propósito).
+- **Panel de notificaciones** (dashboard cliente) → contenido dentro del viewport (antes se salía de pantalla).
+- **Bug real encontrado y corregido en la landing:** el acordeón del FAQ tenía `max-height: 220px` fijo; en mobile el texto envuelve en más líneas por el ancho angosto y algunas respuestas largas se cortaban. Se subió a 480px en mobile.
 
 ### 3.5 Landing de marketing (`Landing.tsx`)
-11 secciones: hero centrado (degradé violeta-verde, logo grande + acrónimo, sin botón "Ingresar" en el header), el problema (stats 78%/+3hs/1de3), la solución (mockup chat), cómo funciona (3 pasos), funciones destacadas (incluye reportes diarios/semanales, Instagram/chat web/idiomas), para quién es, por qué Bolty, planes con precio en "—", FAQ, CTA, footer. Botones de prueba/contacto NO crean cuenta todavía.
+11 secciones: hero centrado (degradé violeta-verde, logo grande + acrónimo, sin botón "Ingresar" en el header), el problema (stats 78%/+3hs/1de3), la solución (mockup chat), cómo funciona (3 pasos), funciones destacadas (incluye reportes diarios/semanales, Instagram/chat web/idiomas), para quién es, por qué Bolty, planes con precio en "—", FAQ, CTA, footer. Botones de prueba/contacto NO crean cuenta todavía. Responsive completo (ver 3.4).
 
 ### 3.6 Mascota Bolty
 Ver sección 2 (marca). Oculta en mobile desde el 11/07.
@@ -186,14 +190,12 @@ Hoy la agenda asume **1 turno por horario**, lo cual no sirve para peluquerías,
 - Precio de costo por producto y margen real (hoy el balance es ingresos − gastos, sin costo de mercadería).
 - Mail automático de aviso de vencimiento de suscripción (depende de comprar el dominio propio, para que salga desde `@bolty.com` o `@bolty.com.ar` — confirmar extensión final).
 
-### 6.6 Responsive pendiente
-- **Landing:** ya tiene una base responsive (breakpoints a 900px/760px) construida antes, pero no fue probada a fondo en dispositivos reales — conviene una pasada de verificación/pulido, no es "empezar de cero".
-- **Panel admin:** sin tratamiento mobile (el sidebar desaparece sin reemplazo). Baja prioridad, se usa desde la compu.
-
-### 6.7 Búsqueda global — ajuste fino pendiente
+### 6.6 Búsqueda global — ajuste fino pendiente
 Hoy el buscador abre la ficha completa solo para clientes; para productos/servicios/pagos precarga el término de búsqueda en la sección (no abre el modal exacto); para turnos salta a la fecha en Agenda (no abre el turno). Falta: abrir directo el ítem/modal exacto en todos los casos.
 
-### 6.8 Trámites / legal (fuera del código)
+> ✅ **Responsive mobile (dashboard, landing y panel admin): completo desde el 11/07.** Ver sección 3.4. Ya no es un pendiente.
+
+### 6.7 Trámites / legal (fuera del código)
 - Registro de la marca Bolty en INPI (atención a similitud con "Bolt").
 - WhatsApp Business API con Meta (alta y aprobación).
 - Dominio propio (`.com` o `.com.ar` — confirmar) y migrar de `bolty-two.vercel.app`.

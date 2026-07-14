@@ -22,7 +22,7 @@ const PLANS: Plan[] = [
   },
   {
     id: 'pro', name: 'Pro', price: 125000,
-    features: ['WhatsApp + Instagram + Web', 'Conversaciones ilimitadas', 'Todo lo del plan Estándar', 'Múltiples sucursales', 'Integraciones a medida', 'Soporte dedicado'],
+    features: ['WhatsApp + Instagram + Web + Mail', 'Conversaciones ilimitadas', 'Todo lo del plan Estándar', 'Múltiples sucursales', 'Integraciones a medida', 'Soporte dedicado'],
   },
 ]
 

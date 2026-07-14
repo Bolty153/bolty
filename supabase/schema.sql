@@ -866,3 +866,319 @@ grant select, insert, update, delete on public.cards to anon, authenticated;
 --     existía sin esta columna, este ALTER la agrega sin tocar filas).
 -- =====================================================================
 alter table public.cards add column if not exists last4 text;
+
+-- =====================================================================
+-- 21) CAPACIDAD Y EQUIPO — turnos con empleados/recursos
+--     Hasta acá la agenda asumía 1 turno por horario. Esto suma:
+--       • empleados/recursos nombrados (Raúl, la dermatóloga, un sillón…)
+--       • la relación empleado↔servicio (quién hace qué): la columna vertebral
+--       • horarios y servicios propios por empleado, con ATAJOS para el dueño
+--         que no necesita esa complejidad ("todos hacen todo", "mismo horario")
+--       • configuración del modo de agenda (capacidad simple vs equipo)
+--     TODO es aditivo: columnas nullables / con default. Los turnos ya
+--     cargados quedan employee_id = NULL (sin asignar) y no se pierde nada.
+--     Sección autocontenida (crea sus propias policies own + admin) para
+--     poder correrse sola sin depender del bloque admin de la sección 16.
+-- =====================================================================
+
+-- (a) Modo de agenda a nivel negocio. Default = comportamiento de siempre:
+--     capacidad simple = 1 turno por horario, sin empleados.
+--       mode:       'simple' (capacidad sin nombres) | 'staff' (empleados)
+--       capacity:   modo simple, cuántos turnos por horario
+--       assignment: modo staff, quién elige → 'client' | 'auto' | 'unassigned'
+alter table public.business_profiles
+  add column if not exists agenda_config jsonb not null
+  default '{"mode":"simple","capacity":1,"assignment":"unassigned"}'::jsonb;
+
+-- (b) Empleados / recursos nombrados
+create table if not exists public.employees (
+  id                  uuid primary key default gen_random_uuid(),
+  user_id             uuid not null references auth.users(id) on delete cascade,
+  name                text not null,
+  role                text,                          -- ej "Peluquero", "Dermatóloga" (opcional)
+  color               text,                          -- color en la agenda (opcional)
+  -- Horarios propios del empleado, mismo shape jsonb que business_hours.
+  -- Con uses_business_hours = true se ignora y se usan los horarios del negocio.
+  schedule            jsonb not null default '{}'::jsonb,
+  uses_business_hours boolean not null default true, -- ATAJO: "mismo horario que el negocio"
+  does_all_services   boolean not null default true, -- ATAJO: "hace todos los servicios"
+  active              boolean not null default true,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now()
+);
+
+create index if not exists employees_user_idx on public.employees(user_id);
+
+alter table public.employees enable row level security;
+
+drop policy if exists "employees_select_own" on public.employees;
+create policy "employees_select_own" on public.employees
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "employees_insert_own" on public.employees;
+create policy "employees_insert_own" on public.employees
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "employees_update_own" on public.employees;
+create policy "employees_update_own" on public.employees
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "employees_delete_own" on public.employees;
+create policy "employees_delete_own" on public.employees
+  for delete using (auth.uid() = user_id);
+
+-- Modo soporte: el admin ve/edita los empleados del cliente (igual que el resto).
+drop policy if exists "employees_admin_all" on public.employees;
+create policy "employees_admin_all" on public.employees
+  for all using (public.is_current_user_admin()) with check (public.is_current_user_admin());
+
+grant select, insert, update, delete on public.employees to anon, authenticated;
+
+-- (c) Relación empleado↔servicio (N:M) — LA COLUMNA VERTEBRAL.
+--     Define qué servicios hace cada empleado. Si does_all_services = true en
+--     el empleado, esta tabla se ignora para ese empleado (hace todo).
+create table if not exists public.employee_services (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  employee_id uuid not null references public.employees(id) on delete cascade,
+  service_id  uuid not null references public.services(id)  on delete cascade,
+  created_at  timestamptz not null default now(),
+  unique (employee_id, service_id)
+);
+
+create index if not exists employee_services_user_idx     on public.employee_services(user_id);
+create index if not exists employee_services_employee_idx on public.employee_services(employee_id);
+create index if not exists employee_services_service_idx  on public.employee_services(service_id);
+
+alter table public.employee_services enable row level security;
+
+drop policy if exists "employee_services_select_own" on public.employee_services;
+create policy "employee_services_select_own" on public.employee_services
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "employee_services_insert_own" on public.employee_services;
+create policy "employee_services_insert_own" on public.employee_services
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "employee_services_update_own" on public.employee_services;
+create policy "employee_services_update_own" on public.employee_services
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "employee_services_delete_own" on public.employee_services;
+create policy "employee_services_delete_own" on public.employee_services
+  for delete using (auth.uid() = user_id);
+
+-- Modo soporte: el admin ve/edita la relación del cliente.
+drop policy if exists "employee_services_admin_all" on public.employee_services;
+create policy "employee_services_admin_all" on public.employee_services
+  for all using (public.is_current_user_admin()) with check (public.is_current_user_admin());
+
+grant select, insert, update, delete on public.employee_services to anon, authenticated;
+
+-- (d) Turnos: quién atiende y qué servicio (ambos opcionales, no rompen nada).
+--     employee_id NULL = "sin asignar" (turnos viejos y modo sin asignar).
+--     on delete set null: borrar un empleado NO borra sus turnos, quedan sin asignar.
+--     service_id refuerza el match empleado↔servicio; se mantiene service_name (texto) por compat.
+alter table public.appointments
+  add column if not exists employee_id uuid references public.employees(id) on delete set null;
+alter table public.appointments
+  add column if not exists service_id  uuid references public.services(id)  on delete set null;
+
+create index if not exists appointments_employee_idx on public.appointments(user_id, employee_id);
+
+-- =====================================================================
+-- 22) DISPONIBILIDAD PARA EL AGENTE (la IA) — RPCs de Postgres
+--     Replican en la base la misma lógica de src/lib/availability.ts para
+--     que el cerebro pueda responder server-side "¿hay turno mañana 3pm con
+--     Raúl para corte?" sin sobrevender ni ofrecer a alguien que no hace ese
+--     servicio o no trabaja ese día. security invoker => respeta RLS; reciben
+--     target_uid (= dueño del negocio) igual que global_search.
+--     El backend del agente debe llamarlas con el service role (o el token del
+--     cliente); anon sin sesión no pasa RLS y no obtiene datos útiles.
+-- =====================================================================
+
+-- Helpers chicos (inmutables): minutos ↔ 'HH:MM' y clave de día.
+create or replace function public._mins(t text) returns int
+  language sql immutable as $$
+    select coalesce(split_part(t, ':', 1)::int * 60 + split_part(t, ':', 2)::int, 0)
+  $$;
+
+create or replace function public._hhmm(m int) returns text
+  language sql immutable as $$
+    select lpad((m / 60)::text, 2, '0') || ':' || lpad((m % 60)::text, 2, '0')
+  $$;
+
+create or replace function public._day_key(d date) returns text
+  language sql immutable as $$
+    select case extract(dow from d)::int
+      when 0 then 'domingo' when 1 then 'lunes'   when 2 then 'martes'
+      when 3 then 'miercoles' when 4 then 'jueves' when 5 then 'viernes'
+      when 6 then 'sabado' end
+  $$;
+
+-- ¿El turno (start, dur) entra completo en algún turno abierto del día?
+-- Contempla el turno cortado (from2/to2 cuando split = true).
+create or replace function public._fits_hours(h jsonb, start_min int, dur int) returns boolean
+  language sql immutable as $$
+    select case
+      when h is null or coalesce((h->>'open')::boolean, false) = false then false
+      else (
+        (start_min >= public._mins(h->>'from') and start_min + dur <= public._mins(h->>'to'))
+        or (
+          coalesce((h->>'split')::boolean, false)
+          and h->>'from2' is not null and h->>'to2' is not null
+          and start_min >= public._mins(h->>'from2') and start_min + dur <= public._mins(h->>'to2')
+        )
+      )
+    end
+  $$;
+
+grant execute on function public._mins(text)            to anon, authenticated;
+grant execute on function public._hhmm(int)             to anon, authenticated;
+grant execute on function public._day_key(date)         to anon, authenticated;
+grant execute on function public._fits_hours(jsonb, int, int) to anon, authenticated;
+
+-- ── ¿Hay lugar para un turno puntual? ──
+-- Modo capacidad: dentro del horario y con cupo libre.
+-- Modo empleado: al menos una persona que HACE el servicio, trabaja esa hora y está libre.
+create or replace function public.check_availability(
+  target_uid    uuid,
+  p_date        date,
+  p_time        text,           -- 'HH:MM'
+  p_service_id  uuid default null,
+  p_duration_min int default null,
+  p_employee_id uuid default null
+) returns jsonb
+language plpgsql
+stable
+security invoker
+set search_path = public
+as $fn$
+declare
+  bh jsonb; cfg jsonb;
+  dur int; start_min int; daykey text;
+  mode text; cap int; taken int; within_hours boolean;
+  v_allow boolean;
+  free_emps jsonb; cand_total int;
+begin
+  select business_hours, agenda_config into bh, cfg
+  from public.business_profiles where user_id = target_uid;
+
+  cfg := coalesce(cfg, '{"mode":"simple","capacity":1,"assignment":"unassigned"}'::jsonb);
+  mode := coalesce(cfg->>'mode', 'simple');
+  cap := coalesce((cfg->>'capacity')::int, 1);
+  v_allow := coalesce((cfg->>'allow_overlap')::boolean, false);
+  start_min := public._mins(p_time);
+  daykey := public._day_key(p_date);
+  dur := coalesce(p_duration_min,
+                  (select duration_min from public.services where id = p_service_id and user_id = target_uid),
+                  30);
+
+  if mode <> 'staff' then
+    within_hours := public._fits_hours(bh->daykey, start_min, dur);
+    select count(*) into taken from public.appointments a
+      where a.user_id = target_uid and a.appt_date = p_date
+        and start_min < public._mins(a.appt_time) + coalesce(a.duration_min, 30)
+        and public._mins(a.appt_time) < start_min + dur;
+    return jsonb_build_object(
+      'mode', 'simple',
+      'available', within_hours and taken < cap,
+      'within_hours', within_hours,
+      'capacity', cap, 'taken', taken, 'remaining', greatest(cap - taken, 0)
+    );
+  end if;
+
+  -- modo por empleado
+  with cand as (
+    select e.* from public.employees e
+    where e.user_id = target_uid and e.active
+      and (p_employee_id is null or e.id = p_employee_id)
+      and (
+        e.does_all_services
+        or (p_service_id is not null and exists (
+          select 1 from public.employee_services es
+          where es.employee_id = e.id and es.service_id = p_service_id))
+      )
+  ),
+  evaluated as (
+    select c.id, c.name,
+      public._fits_hours(case when c.uses_business_hours then bh->daykey else c.schedule->daykey end, start_min, dur) as works,
+      not exists (
+        select 1 from public.appointments a
+        where a.user_id = target_uid and a.employee_id = c.id and a.appt_date = p_date
+          and start_min < public._mins(a.appt_time) + coalesce(a.duration_min, 30)
+          and public._mins(a.appt_time) < start_min + dur
+      ) as not_busy
+    from cand c
+  )
+  select
+    coalesce(jsonb_agg(jsonb_build_object('id', id, 'name', name)) filter (where works and (not_busy or v_allow)), '[]'::jsonb),
+    count(*)
+  into free_emps, cand_total
+  from evaluated;
+
+  return jsonb_build_object(
+    'mode', 'staff',
+    'assignment', coalesce(cfg->>'assignment', 'unassigned'),
+    'available', jsonb_array_length(free_emps) > 0,
+    'free_employees', free_emps,
+    'candidates_total', cand_total
+  );
+end;
+$fn$;
+
+grant execute on function public.check_availability(uuid, date, text, uuid, int, uuid) to anon, authenticated;
+
+-- ── Horarios libres de un día para un servicio (para proponer opciones) ──
+-- Recorre los turnos abiertos del día en pasos de p_step_min y devuelve los
+-- horarios donde check_availability da disponible.
+create or replace function public.agenda_free_slots(
+  target_uid    uuid,
+  p_date        date,
+  p_service_id  uuid default null,
+  p_duration_min int default null,
+  p_step_min    int default 30,
+  p_employee_id uuid default null
+) returns jsonb
+language plpgsql
+stable
+security invoker
+set search_path = public
+as $fn$
+declare
+  bh jsonb; h jsonb; dur int; daykey text;
+  a int; b int; t int;
+  chk jsonb; slots jsonb := '[]'::jsonb;
+begin
+  select business_hours into bh from public.business_profiles where user_id = target_uid;
+  daykey := public._day_key(p_date);
+  h := bh->daykey;
+  dur := coalesce(p_duration_min,
+                  (select duration_min from public.services where id = p_service_id and user_id = target_uid),
+                  30);
+
+  if h is null or coalesce((h->>'open')::boolean, false) = false then
+    return jsonb_build_object('date', p_date, 'duration_min', dur, 'slots', '[]'::jsonb);
+  end if;
+
+  for a, b in
+    select public._mins(h->>'from'), public._mins(h->>'to')
+    union all
+    select public._mins(h->>'from2'), public._mins(h->>'to2')
+    where coalesce((h->>'split')::boolean, false) and h->>'from2' is not null and h->>'to2' is not null
+  loop
+    t := a;
+    while t + dur <= b loop
+      chk := public.check_availability(target_uid, p_date, public._hhmm(t), p_service_id, dur, p_employee_id);
+      if (chk->>'available')::boolean then
+        slots := slots || jsonb_build_object('time', public._hhmm(t), 'free_employees', coalesce(chk->'free_employees', '[]'::jsonb));
+      end if;
+      t := t + p_step_min;
+    end loop;
+  end loop;
+
+  return jsonb_build_object('date', p_date, 'duration_min', dur, 'slots', slots);
+end;
+$fn$;
+
+grant execute on function public.agenda_free_slots(uuid, date, uuid, int, int, uuid) to anon, authenticated;
