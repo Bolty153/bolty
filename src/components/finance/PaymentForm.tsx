@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Combobox from '../Combobox'
 import AccountFields, { emptyAccount } from './AccountFields'
 import type { AccountState } from './AccountFields'
@@ -33,6 +33,7 @@ export default function PaymentForm({
   const [adjValue, setAdjValue] = useState('')
   const [adjUnit, setAdjUnit] = useState<'$' | '%'>('$')
   const [date, setDate] = useState(todayKey())
+  const [pending, setPending] = useState(false)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
@@ -42,6 +43,11 @@ export default function PaymentForm({
 
   // La cuenta/terminal destino aplica a transferencia y a tarjeta.
   const usesAccount = method === 'transferencia' || method === 'tarjeta'
+  // "Pendiente de confirmación" sólo tiene sentido con transferencia (hay un
+  // comprobante para verificar en el banco). Con efectivo/tarjeta se resetea,
+  // así nunca queda un pago no-transferencia marcado como pendiente.
+  const canBePending = method === 'transferencia'
+  useEffect(() => { if (!canBePending) setPending(false) }, [canBePending])
 
   async function submit() {
     setErr(null)
@@ -62,6 +68,7 @@ export default function PaymentForm({
         card_type: method === 'tarjeta' ? cardType : null,
         adjustment,
         pay_date: date,
+        verified: !(canBePending && pending),
       })
     } catch (e) {
       setErr('No se pudo registrar: ' + (e as Error).message)
@@ -88,7 +95,7 @@ export default function PaymentForm({
             getLabel={s => s.name}
             getSub={s => (s.on_request ? 'A consultar' : fmtMoney(s.price))}
             onPick={s => { if (!s.on_request) setBase(String(s.price)) }}
-            placeholder="Ej: Corte de pelo"
+            placeholder=""
           />
         </div>
 
@@ -116,6 +123,8 @@ export default function PaymentForm({
           <label>Fecha</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)} />
         </div>
+
+        {canBePending && <PendingToggle pending={pending} setPending={setPending} />}
 
         <div className="fin-total-row">
           <span>Total a cobrar</span>
@@ -160,6 +169,23 @@ export function CardTypePicker({ cardType, setCardType }: {
         <div className={`chip${cardType === 'credito' ? ' sel' : ''}`} onClick={() => setCardType('credito')}>Crédito</div>
       </div>
     </div>
+  )
+}
+
+// Toggle "Pendiente de confirmación": el dueño recibió el comprobante pero
+// todavía no verificó en su banco que la plata entró. Marca verified = FALSE:
+// el pago NO cuenta como ingreso hasta que lo confirme.
+export function PendingToggle({ pending, setPending }: {
+  pending: boolean; setPending: (v: boolean) => void
+}) {
+  return (
+    <label className={`fin-pending-toggle${pending ? ' on' : ''}`}>
+      <input type="checkbox" checked={pending} onChange={e => setPending(e.target.checked)} />
+      <span className="fin-pending-txt">
+        <b>Pendiente de confirmación</b>
+        <small>Recibí el comprobante, pero todavía no verifiqué que entró la plata. No se suma a tus ingresos hasta que lo confirmes.</small>
+      </span>
+    </label>
   )
 }
 

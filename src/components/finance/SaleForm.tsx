@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import Combobox from '../Combobox'
-import { MethodPicker, CardTypePicker, AdjustmentPicker } from './PaymentForm'
+import { MethodPicker, CardTypePicker, AdjustmentPicker, PendingToggle } from './PaymentForm'
 import AccountFields, { emptyAccount } from './AccountFields'
 import type { AccountState } from './AccountFields'
 import { computeAdjustment, fmtMoney } from '../../hooks/useFinance'
@@ -34,6 +34,7 @@ export default function SaleForm({
   const [adjValue, setAdjValue] = useState('')
   const [adjUnit, setAdjUnit] = useState<'$' | '%'>('$')
   const [date, setDate] = useState(todayKey())
+  const [pending, setPending] = useState(false)
   // manual
   const [manualAmount, setManualAmount] = useState('')
   const [manualDesc, setManualDesc] = useState('')
@@ -65,6 +66,10 @@ export default function SaleForm({
   const usesAccount = method === 'transferencia' || method === 'tarjeta'
   const accountText = usesAccount ? (account.name.trim() || null) : null
   const cardTypeVal: CardType | null = method === 'tarjeta' ? cardType : null
+  // "Pendiente de confirmación" sólo con transferencia (efectivo/tarjeta se resetea).
+  const canBePending = method === 'transferencia'
+  useEffect(() => { if (!canBePending) setPending(false) }, [canBePending])
+  const verifiedVal = !(canBePending && pending)
 
   async function maybeSaveAccount() {
     if (usesAccount && account.save && account.name.trim()) {
@@ -91,6 +96,7 @@ export default function SaleForm({
           card_type: cardTypeVal,
           adjustment: 0,
           pay_date: date,
+          verified: verifiedVal,
         }, false)
       } catch (e) { setErr('No se pudo registrar: ' + (e as Error).message); setSaving(false) }
       return
@@ -111,6 +117,7 @@ export default function SaleForm({
         adjustment,
         items: lineItems,
         pay_date: date,
+        verified: verifiedVal,
       }, discountStock)
     } catch (e) { setErr('No se pudo registrar: ' + (e as Error).message); setSaving(false) }
   }
@@ -191,6 +198,7 @@ export default function SaleForm({
               <label>Fecha</label>
               <input type="date" value={date} onChange={e => setDate(e.target.value)} />
             </div>
+            {canBePending && <PendingToggle pending={pending} setPending={setPending} />}
             <div className="fin-total-row"><span>Total</span><b>{fmtMoney(final)}</b></div>
           </>
         ) : (
@@ -213,6 +221,7 @@ export default function SaleForm({
               <label>Fecha</label>
               <input type="date" value={date} onChange={e => setDate(e.target.value)} />
             </div>
+            {canBePending && <PendingToggle pending={pending} setPending={setPending} />}
           </>
         )}
 

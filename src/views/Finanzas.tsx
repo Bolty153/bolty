@@ -1,7 +1,8 @@
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import type { ViewFocus } from '../App'
-import { useFinance, fmtMoney } from '../hooks/useFinance'
+import { useFinance, fmtMoney, isVerified } from '../hooks/useFinance'
 import type { Payment } from '../hooks/useFinance'
+import type { BankAccount } from '../hooks/useBankAccounts'
 import { useExpenses, SOURCE_LABEL } from '../hooks/useExpenses'
 import type { Expense } from '../hooks/useExpenses'
 import { useProducts } from '../hooks/useProducts'
@@ -38,7 +39,7 @@ const monthLongLabel = (key: string) => {
 const dayLongLabel = (key: string) => { const [y, m, d] = key.split('-'); return `${d}/${m}/${y}` }
 
 export default function Finanzas({ focus }: { focus?: ViewFocus }) {
-  const { payments, loading, addPayment, deletePayment } = useFinance()
+  const { payments, loading, addPayment, deletePayment, confirmPayment, rejectPayment } = useFinance()
   const { expenses, addExpense, updateExpense, deleteExpense } = useExpenses()
   const { products, bulkUpdateStock } = useProducts()
   const { services } = useServices()
@@ -53,6 +54,16 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
   const [toDelete, setToDelete] = useState<DelTarget | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [finSearch, setFinSearch] = useState('')
+  const [pendingOpen, setPendingOpen] = useState(false)   // acordeón de pendientes (colapsado por defecto)
+  const [toReject, setToReject] = useState<Payment | null>(null)
+  const [actingId, setActingId] = useState<string | null>(null)
+  const pendingRef = useRef<HTMLDivElement>(null)
+
+  // Abre el acordeón de pendientes y lo trae a la vista (desde la KPI, más abajo).
+  const openPending = useCallback(() => {
+    setPendingOpen(true)
+    requestAnimationFrame(() => pendingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }, [])
 
   // Prefiltro de movimientos cuando venimos del buscador global.
   useEffect(() => { if (focus?.term != null) setFinSearch(focus.term) }, [focus?.ts])
@@ -93,17 +104,30 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
   const rangePayments = useMemo(() => payments.filter(p => inRange(p.pay_date)), [payments, inRange])
   const rangeExpenses = useMemo(() => expenses.filter(e => inRange(e.expense_date)), [expenses, inRange])
 
+  // CRÍTICO: sólo los pagos VERIFICADOS cuentan como ingreso (KPIs, facturación,
+  // gráficos, balance). Los pendientes van SIEMPRE aparte, nunca mezclados.
+  const rangeVerified = useMemo(() => rangePayments.filter(isVerified), [rangePayments])
+  const verifiedPayments = useMemo(() => payments.filter(isVerified), [payments])
+
+  // Pendientes de confirmación: se muestran de TODO el historial (no del período),
+  // porque son un pendiente accionable — el dueño no debe perderlos de vista.
+  const allPending = useMemo(
+    () => payments.filter(p => !isVerified(p)).sort((a, b) => b.pay_date.localeCompare(a.pay_date)),
+    [payments]
+  )
+  const pendingTotal = useMemo(() => allPending.reduce((s, p) => s + p.amount, 0), [allPending])
+
   // Totales de ingresos por forma de pago (efectivo / transferencia / tarjeta).
   const stats = useMemo(() => {
     let total = 0, efectivo = 0, transferencia = 0, tarjeta = 0
-    rangePayments.forEach(p => {
+    rangeVerified.forEach(p => {
       total += p.amount
       if (p.method === 'efectivo') efectivo += p.amount
       else if (p.method === 'tarjeta') tarjeta += p.amount
       else transferencia += p.amount
     })
-    return { total, efectivo, transferencia, tarjeta, count: rangePayments.length }
-  }, [rangePayments])
+    return { total, efectivo, transferencia, tarjeta, count: rangeVerified.length }
+  }, [rangeVerified])
 
   const methodTotal = stats.efectivo + stats.transferencia + stats.tarjeta
 
@@ -123,7 +147,7 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
   const series = useMemo(() => {
     const sum: Record<string, number> = {}
     if (gran === 'dia') {
-      payments.forEach(p => { sum[p.pay_date] = (sum[p.pay_date] ?? 0) + p.amount })
+      verifiedPayments.forEach(p => { sum[p.pay_date] = (sum[p.pay_date] ?? 0) + p.amount })
       const base = fromKey(dayKey)
       return Array.from({ length: 7 }, (_, i) => {
         const d = addDays(base, -(6 - i)); const k = toKey(d)
@@ -133,26 +157,26 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
     if (gran === 'mes') {
       const [y, m] = monthKey.split('-').map(Number)
       const days = new Date(y, m, 0).getDate()
-      payments.forEach(p => { if (p.pay_date.startsWith(monthKey)) { const dd = p.pay_date.slice(8, 10); sum[dd] = (sum[dd] ?? 0) + p.amount } })
+      verifiedPayments.forEach(p => { if (p.pay_date.startsWith(monthKey)) { const dd = p.pay_date.slice(8, 10); sum[dd] = (sum[dd] ?? 0) + p.amount } })
       return Array.from({ length: days }, (_, i) => {
         const dd = pad(i + 1)
         return { label: String(i + 1), total: sum[dd] ?? 0, isNow: `${monthKey}-${dd}` === todayKey }
       })
     }
     if (gran === 'anio') {
-      payments.forEach(p => { if (p.pay_date.startsWith(yearKey)) { const mm = p.pay_date.slice(5, 7); sum[mm] = (sum[mm] ?? 0) + p.amount } })
+      verifiedPayments.forEach(p => { if (p.pay_date.startsWith(yearKey)) { const mm = p.pay_date.slice(5, 7); sum[mm] = (sum[mm] ?? 0) + p.amount } })
       return Array.from({ length: 12 }, (_, i) => {
         const mm = pad(i + 1)
         return { label: MONTHS_SHORT[i], total: sum[mm] ?? 0, isNow: `${yearKey}-${mm}` === todayKey.slice(0, 7) }
       })
     }
     // todo: por mes, sólo los meses con datos
-    payments.forEach(p => { const ym = p.pay_date.slice(0, 7); sum[ym] = (sum[ym] ?? 0) + p.amount })
+    verifiedPayments.forEach(p => { const ym = p.pay_date.slice(0, 7); sum[ym] = (sum[ym] ?? 0) + p.amount })
     return Object.keys(sum).sort().map(ym => {
       const [yy, mm] = ym.split('-')
       return { label: `${MONTHS_SHORT[Number(mm) - 1]} ${yy.slice(2)}`, total: sum[ym], isNow: ym === todayKey.slice(0, 7) }
     })
-  }, [payments, gran, dayKey, monthKey, yearKey, todayKey])
+  }, [verifiedPayments, gran, dayKey, monthKey, yearKey, todayKey])
 
   const maxBar = Math.max(1, ...series.map(d => d.total))
   const manyBars = series.length > 14
@@ -164,14 +188,14 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
   // Cuánto entró a cada cuenta (transferencias del período).
   const byAccount = useMemo(() => {
     const map: Record<string, number> = {}
-    rangePayments.forEach(p => {
+    rangeVerified.forEach(p => {
       if (p.method === 'transferencia') {
         const key = p.account?.trim() || 'Sin especificar'
         map[key] = (map[key] ?? 0) + p.amount
       }
     })
     return Object.entries(map).map(([name, total]) => ({ name, total })).sort((a, b) => b.total - a.total)
-  }, [rangePayments])
+  }, [rangeVerified])
 
   async function confirmDelete() {
     if (!toDelete) return
@@ -193,6 +217,25 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
     const a = accounts.find(x => x.name.trim().toLowerCase() === name.trim().toLowerCase())
     return a?.number || a?.alias_cbu || ''
   }
+  // Cuenta guardada que coincide (para mostrar banco + número/alias en el pendiente).
+  const accountOf = (name?: string | null): BankAccount | undefined =>
+    name ? accounts.find(x => x.name.trim().toLowerCase() === name.trim().toLowerCase()) : undefined
+
+  // Confirmar un pendiente: la plata entró. Pasa a contar como ingreso.
+  async function onConfirm(p: Payment) {
+    setActingId(p.id)
+    try { await confirmPayment(p.id) }
+    catch (e) { alert('No se pudo confirmar: ' + (e as Error).message) }
+    finally { setActingId(null) }
+  }
+  // Rechazar (la plata nunca entró): lo borramos.
+  async function doReject() {
+    if (!toReject) return
+    setActingId(toReject.id)
+    try { await rejectPayment(toReject.id); setToReject(null) }
+    catch (e) { alert('No se pudo rechazar: ' + (e as Error).message) }
+    finally { setActingId(null) }
+  }
 
   // Cómo te pagó el cliente (para el detalle del movimiento).
   const methodMeta = (p: Payment) => {
@@ -207,7 +250,7 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
 
   // Movimientos unificados: ingresos (+) y gastos (−), ordenados por fecha.
   const movimientos = useMemo<Movi[]>(() => {
-    const ing: Movi[] = rangePayments.map(p => ({
+    const ing: Movi[] = rangeVerified.map(p => ({
       id: p.id, type: 'ingreso', date: p.pay_date,
       title: (p.description || kindLabel(p.kind)) + (p.customer_name ? ` · ${p.customer_name}` : ''),
       meta: methodMeta(p), amount: p.amount, badge: kindLabel(p.kind), badgeClass: p.kind,
@@ -222,7 +265,7 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
     if (q) all = all.filter(m => m.title.toLowerCase().includes(q) || m.meta.toLowerCase().includes(q) || m.badge.toLowerCase().includes(q))
     return all.slice(0, 30)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rangePayments, rangeExpenses, finSearch])
+  }, [rangeVerified, rangeExpenses, finSearch])
 
   // Donut de forma de pago (3 partes) — siempre visible.
   const methodParts = [
@@ -290,6 +333,80 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
         </div>
       </div>
 
+      {/* PENDIENTES DE CONFIRMACIÓN — colapsado por defecto: sólo un chip compacto
+          arriba, para no empujar KPIs/gráficos/movimientos. Al tocarlo se despliega
+          el acordeón con la lista completa. NO cuenta como ingreso hasta confirmar. */}
+      {allPending.length > 0 && (
+        <div className="fin-pending-wrap" ref={pendingRef} style={{ marginTop: 16 }}>
+          <button
+            className={`fin-pending-chip${pendingOpen ? ' open' : ''}`}
+            onClick={() => setPendingOpen(v => !v)}
+            aria-expanded={pendingOpen}
+          >
+            <span className="fin-pending-chip-ic">⏳</span>
+            <span className="fin-pending-chip-lbl">Pendiente de confirmación</span>
+            <span className="fin-pending-badge">{allPending.length}</span>
+            <span className="fin-pending-chip-total">{fmtMoney(pendingTotal)}</span>
+            <svg className="fin-pending-chip-caret" fill="none" stroke="currentColor" strokeWidth="2.4" viewBox="0 0 24 24" width="15" height="15"><path d="M6 9l6 6 6-6" /></svg>
+          </button>
+
+          {pendingOpen && (
+          <div className="card fin-pending-panel" style={{ marginTop: 10 }}>
+            <div className="sub">Comprobantes que recibiste pero todavía no verificaste en tu banco. Abrí tu homebanking, fijate si entró la plata y confirmá.</div>
+
+            <div className="fin-pending-list">
+            {allPending.map(p => {
+              const acc = accountOf(p.account)
+              const [py, pm, pd] = p.pay_date.split('-')
+              const methodTxt = p.method === 'efectivo' ? '💵 Efectivo'
+                : p.method === 'tarjeta' ? `💳 Tarjeta ${p.card_type === 'credito' ? 'crédito' : 'débito'}`
+                : '🏦 Transferencia'
+              const busy = actingId === p.id
+              return (
+                <div key={p.id} className="fin-pending-item">
+                  <div className="fin-pending-info">
+                    <div className="fin-pending-top">
+                      <span className="fin-pending-amount">{fmtMoney(p.amount)}</span>
+                      <span className="fin-pending-tag">Pendiente de confirmación</span>
+                    </div>
+                    <div className="fin-pending-desc">
+                      {(p.description || kindLabel(p.kind))}{p.customer_name ? ` · ${p.customer_name}` : ''}
+                    </div>
+                    <div className="fin-pending-fields">
+                      <span className="fin-pending-field"><i>Fecha</i>{pd}/{pm}/{py}</span>
+                      <span className="fin-pending-field"><i>Quién pagó</i>{p.customer_name || '—'}</span>
+                      <span className="fin-pending-field"><i>Forma de pago</i>{methodTxt}</span>
+                      <span className="fin-pending-field fin-pending-field-acc">
+                        <i>¿A qué cuenta dice que entró?</i>
+                        {p.account ? (
+                          <>
+                            <b>{p.account}</b>
+                            {acc?.bank && <span> · {acc.bank}</span>}
+                            {(acc?.number || acc?.alias_cbu) && <span className="fin-pending-cbu"> · {acc.number || acc.alias_cbu}</span>}
+                            {acc?.holder && <span className="fin-pending-holder"> · {acc.holder}</span>}
+                            {!acc && <span className="fin-pending-nomatch"> · (cuenta no guardada)</span>}
+                          </>
+                        ) : <span>Sin especificar</span>}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="fin-pending-actions">
+                    <button className="btn fin-pending-confirm" disabled={busy} onClick={() => onConfirm(p)}>
+                      {busy ? '…' : '✓ Confirmar'}
+                    </button>
+                    <button className="btn-outline fin-pending-reject" disabled={busy} onClick={() => setToReject(p)}>
+                      Rechazar
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+            </div>
+          </div>
+          )}
+        </div>
+      )}
+
       {/* Selector de período */}
       <div className="fin-period">
         <div className="fin-period-tabs">
@@ -313,8 +430,8 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
         <span className="fin-period-label">{periodLabel}</span>
       </div>
 
-      {/* KPIs del período: Ingresos, Gastos y Balance */}
-      <div className="fin-kpis" style={{ marginTop: 16 }}>
+      {/* KPIs del período: Ingresos, Gastos y Balance (+ Pendiente si lo hay) */}
+      <div className={`fin-kpis${pendingTotal > 0 ? ' has-pending' : ''}`} style={{ marginTop: 16 }}>
         <div className="kpi">
           <div className="kpi-lbl">Ingresos · {periodLabel}</div>
           <div className="kpi-val" style={{ color: 'var(--mint)' }}>{fmtMoney(stats.total)}</div>
@@ -327,6 +444,12 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
           <div className="kpi-lbl">Balance (ingresos − gastos)</div>
           <div className="kpi-val">{fmtMoney(balance)}</div>
         </div>
+        {pendingTotal > 0 && (
+          <div className="kpi fin-kpi-pending" role="button" title="Ver los pendientes" onClick={openPending}>
+            <div className="kpi-lbl">⏳ Pendiente de confirmación</div>
+            <div className="kpi-val" style={{ color: 'var(--amber)' }}>{fmtMoney(pendingTotal)}</div>
+          </div>
+        )}
       </div>
 
       <div className="grid-2" style={{ marginTop: 18 }}>
@@ -558,6 +681,29 @@ export default function Finanzas({ focus }: { focus?: ViewFocus }) {
               <button className="btn-outline" onClick={() => setToDelete(null)} disabled={deleting}>Volver</button>
               <button className="btn btn-danger" onClick={confirmDelete} disabled={deleting}>
                 {deleting ? 'Borrando…' : 'Sí, borrar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toReject && (
+        <div className="modal-ov" onClick={() => actingId === null && setToReject(null)}>
+          <div className="modal-box confirm-box" onClick={e => e.stopPropagation()}>
+            <div className="confirm-ic">
+              <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" width="26" height="26">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </div>
+            <h2>Rechazar pago pendiente</h2>
+            <p>
+              ¿La plata de <b>{fmtMoney(toReject.amount)}</b>{toReject.customer_name ? ` de ${toReject.customer_name}` : ''} nunca entró?
+              <br />Si rechazás, este pago pendiente se borra{toReject.appointment_id ? ' y el turno vuelve a quedar sin pagar' : ''}. No cuenta ni contó como ingreso.
+            </p>
+            <div className="modal-actions">
+              <button className="btn-outline" onClick={() => setToReject(null)} disabled={actingId !== null}>Volver</button>
+              <button className="btn btn-danger" onClick={doReject} disabled={actingId !== null}>
+                {actingId !== null ? 'Rechazando…' : 'Sí, rechazar'}
               </button>
             </div>
           </div>

@@ -1863,8 +1863,85 @@ h1,h2,h3,h4,h5,.disp {
    FINANZAS
    ===================================================================== */
 .fin-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.fin-kpis.has-pending { grid-template-columns: repeat(4, 1fr); }
 .fin-kpis .kpi-lbl { margin-top: 0; margin-bottom: 8px; }
 .fin-kpis .kpi-val { font-size: 26px; }
+.fin-kpi-pending { cursor: pointer; border: 1px solid var(--amber); background: var(--amber-wash); }
+.fin-kpi-pending:hover { box-shadow: var(--sh-m); transform: translateY(-2px); }
+.fin-kpi-pending .kpi-lbl { color: #a36000; }
+
+/* ── Toggle "Pendiente de confirmación" en los modales de pago/venta ── */
+.fin-pending-toggle {
+  display: flex; align-items: flex-start; gap: 10px; margin-top: 6px; cursor: pointer;
+  padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 12px; transition: all .15s;
+}
+.fin-pending-toggle.on { border-color: var(--amber); background: var(--amber-wash); }
+.fin-pending-toggle input { margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--amber); }
+.fin-pending-txt { display: flex; flex-direction: column; gap: 3px; }
+.fin-pending-txt b { font-size: 13.5px; }
+.fin-pending-toggle.on .fin-pending-txt b { color: #a36000; }
+.fin-pending-txt small { font-size: 12px; color: var(--ink-soft); line-height: 1.45; }
+
+/* ── Panel de pendientes de confirmación en Finanzas ── */
+.fin-pending-panel { border: 1px solid var(--amber); }
+.fin-pending-badge {
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 12.5px;
+  min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px;
+  background: var(--amber); color: #fff; display: inline-flex; align-items: center; justify-content: center;
+}
+/* Chip compacto (colapsado por defecto): abre el acordeón de pendientes */
+.fin-pending-chip {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 11px 14px; border: 1px solid var(--amber); border-radius: 12px;
+  background: var(--amber-wash); color: #92560a; cursor: pointer;
+  font-family: inherit; font-size: 14px; text-align: left; transition: all .15s;
+}
+.fin-pending-chip:hover { box-shadow: var(--sh-s); }
+.fin-pending-chip-ic { font-size: 15px; line-height: 1; flex-shrink: 0; }
+.fin-pending-chip-lbl { font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fin-pending-chip-total {
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: #a36000; margin-left: auto;
+}
+.fin-pending-chip-caret { color: #a36000; flex-shrink: 0; transition: transform .18s; }
+.fin-pending-chip.open .fin-pending-chip-caret { transform: rotate(180deg); }
+
+.fin-pending-list { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+.fin-pending-item {
+  display: flex; align-items: center; gap: 16px; padding: 14px 16px;
+  border: 1px solid var(--amber); border-radius: 14px; background: var(--amber-wash);
+}
+.fin-pending-info { flex: 1; min-width: 0; }
+.fin-pending-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fin-pending-amount { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; color: #92560a; }
+.fin-pending-tag {
+  font-size: 10.5px; font-weight: 700; color: #a36000; background: #fff;
+  border: 1px solid var(--amber); padding: 2px 8px; border-radius: 6px; white-space: nowrap;
+}
+.fin-pending-desc { font-size: 14px; font-weight: 600; margin-top: 4px; color: var(--ink); }
+.fin-pending-fields {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; margin-top: 10px;
+}
+.fin-pending-field { display: flex; flex-direction: column; font-size: 13px; color: var(--ink); min-width: 0; }
+.fin-pending-field i { font-style: normal; font-size: 11px; color: var(--ink-faint); margin-bottom: 1px; }
+.fin-pending-field-acc { grid-column: 1 / -1; }
+.fin-pending-field-acc b { font-weight: 700; }
+.fin-pending-cbu { font-family: 'Space Grotesk', sans-serif; }
+.fin-pending-holder { color: var(--ink-soft); }
+.fin-pending-nomatch { color: var(--ink-faint); font-style: italic; }
+.fin-pending-actions { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+.fin-pending-confirm { background: var(--mint); box-shadow: 0 8px 22px rgba(0,200,150,.25); white-space: nowrap; }
+.fin-pending-confirm:hover { background: #00b085; }
+.fin-pending-reject { white-space: nowrap; }
+.fin-pending-reject:hover { border-color: var(--rose); color: var(--rose); }
+
+@media (max-width: 640px) {
+  .fin-pending-item { flex-direction: column; align-items: stretch; gap: 12px; }
+  .fin-pending-actions { flex-direction: row; }
+  .fin-pending-actions .btn, .fin-pending-actions .btn-outline { flex: 1; }
+  .fin-pending-fields { grid-template-columns: 1fr; }
+  .fin-pending-chip-total { margin-left: 0; }
+  .fin-pending-chip-caret { margin-left: auto; }
+}
 
 /* Selector de período de Finanzas (día / mes / año / todo) */
 .fin-period { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -1993,6 +2070,16 @@ h1,h2,h3,h4,h5,.disp {
   position: absolute; top: 5px; right: 32px; width: 22px; height: 22px; border-radius: 6px;
   background: var(--mint-wash); color: #0b7a4f; font-size: 13px; font-weight: 800;
   display: flex; align-items: center; justify-content: center;
+}
+/* Turno con pago pendiente de confirmación (ámbar) */
+.appt-pending {
+  font-size: 10.5px; font-weight: 700; color: #a36000; background: var(--amber-wash);
+  padding: 2px 7px; border-radius: 6px; white-space: nowrap;
+}
+.daycal-appt-pending {
+  position: absolute; top: 5px; right: 32px; width: 22px; height: 22px; border-radius: 6px;
+  background: var(--amber-wash); color: #a36000; font-size: 12px;
+  display: flex; align-items: center; justify-content: center; cursor: help;
 }
 
 @media (max-width: 560px) {
@@ -2126,8 +2213,13 @@ h1,h2,h3,h4,h5,.disp {
 .sale-discount-txt b { font-size: 13.5px; font-weight: 600; }
 .sale-discount-txt small { font-size: 12px; color: var(--ink-soft); margin-top: 1px; }
 
+/* 4 KPIs (con pendiente) apretados: pasan a 2×2 en pantallas medianas */
+@media (max-width: 980px) {
+  .fin-kpis.has-pending { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 560px) {
-  .fin-kpis { grid-template-columns: 1fr; }
+  .fin-kpis, .fin-kpis.has-pending { grid-template-columns: 1fr; }
   .sale-head { display: none; }
   .sale-item { grid-template-columns: 1fr auto; gap: 10px; }
   .sale-cell-prod { grid-column: 1 / -1; }

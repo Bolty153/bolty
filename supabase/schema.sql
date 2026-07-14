@@ -1236,3 +1236,32 @@ alter table public.expenses
   add column if not exists employee_id uuid references public.employees(id) on delete set null;
 
 create index if not exists expenses_employee_idx on public.expenses(user_id, employee_id);
+
+-- =====================================================================
+-- 24) PAGOS PENDIENTES DE CONFIRMACIÓN
+--     Cuando un cliente manda un comprobante de transferencia, el pago se
+--     registra pero NO cuenta como ingreso hasta que el dueño verifica en su
+--     banco que la plata realmente entró.
+--       verified      = TRUE por defecto (todos los pagos existentes siguen
+--                        contando como ingreso, igual que hoy). FALSE = pendiente.
+--       verified_at   = cuándo se confirmó (null mientras esté pendiente).
+--       proof_url     = comprobante subido (a futuro lo cargará el agente de IA).
+--     Además vinculamos el pago con el turno que lo originó (appointment_id),
+--     así el estado del turno en la Agenda refleja si el pago está confirmado:
+--       turno con pago pendiente -> "Pago pendiente de confirmación" (ámbar)
+--       turno con pago verificado -> "Pagado" (verde).
+--     Todo es aditivo y nullable: no rompe pagos ni turnos existentes.
+-- =====================================================================
+alter table public.payments
+  add column if not exists verified    boolean not null default true;
+alter table public.payments
+  add column if not exists verified_at timestamptz;
+alter table public.payments
+  add column if not exists proof_url   text;
+alter table public.payments
+  add column if not exists appointment_id uuid references public.appointments(id) on delete set null;
+
+-- Para listar rápido los pendientes de un negocio.
+create index if not exists payments_pending_idx on public.payments(user_id, verified);
+-- Para cruzar un turno con su pago.
+create index if not exists payments_appointment_idx on public.payments(appointment_id);

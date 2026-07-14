@@ -56,8 +56,31 @@ export default function Agenda({ focus }: { focus?: ViewFocus }) {
   const { employees, serviceMap } = useEmployees()
   const { customers, upsertFromAppointment } = useCustomers()
   const { business } = useBusinessContext()
-  const { addPayment } = useFinance()
+  const { payments, addPayment } = useFinance()
   const { accounts, addAccount } = useBankAccounts()
+
+  // Estado de pago de cada turno, derivado del pago asociado (si lo hay):
+  //  - pago pendiente de confirmar -> 'pending' (ámbar)
+  //  - pago confirmado (o turno marcado pagado) -> 'paid' (verde)
+  //  - sin pago -> 'unpaid'
+  // Así Agenda y Finanzas quedan sincronizadas: al confirmar/rechazar el pago
+  // en Finanzas, el turno cambia de estado solo.
+  const payByAppt = useMemo(() => {
+    const m: Record<string, typeof payments[number]> = {}
+    payments.forEach(p => {
+      if (!p.appointment_id) return
+      const prev = m[p.appointment_id]
+      // Priorizamos un pago verificado; si no, el más reciente.
+      if (!prev || (p.verified !== false && prev.verified === false)) m[p.appointment_id] = p
+    })
+    return m
+  }, [payments])
+  const payStateOf = (a: Appointment): 'pending' | 'paid' | 'unpaid' => {
+    const p = payByAppt[a.id]
+    if (p && p.verified === false) return 'pending'
+    if (a.paid || (p && p.verified !== false)) return 'paid'
+    return 'unpaid'
+  }
 
   const cfg = business.agenda_config
   const staffMode = cfg.mode === 'staff' && employees.length > 0
@@ -314,6 +337,7 @@ export default function Agenda({ focus }: { focus?: ViewFocus }) {
                 const color = staffMode && emp?.color ? emp.color : serviceColor(a.service_name)
                 const hasColor = color.startsWith('#')
                 const compact = height < 52
+                const payState = payStateOf(a)
                 return (
                   <div
                     key={a.id}
@@ -329,7 +353,8 @@ export default function Agenda({ focus }: { focus?: ViewFocus }) {
                     <div className="daycal-appt-main">
                       <div className="daycal-appt-top">
                         <span className="daycal-appt-name">{a.customer_name}</span>
-                        {a.paid && <span className="appt-paid">✓ Cobrado</span>}
+                        {payState === 'paid' && <span className="appt-paid">✓ Cobrado</span>}
+                        {payState === 'pending' && <span className="appt-pending">⏳ Pago pendiente</span>}
                         <span className="daycal-appt-time">{a.appt_time}{a.duration_min ? ` · ${fmtDuration(a.duration_min)}` : ''}</span>
                       </div>
                       {!compact && (
@@ -343,8 +368,10 @@ export default function Agenda({ focus }: { focus?: ViewFocus }) {
                         </div>
                       )}
                     </div>
-                    {a.paid ? (
-                      <span className="daycal-appt-paid" title="Pago registrado">✓</span>
+                    {payState === 'paid' ? (
+                      <span className="daycal-appt-paid" title="Pago confirmado">✓</span>
+                    ) : payState === 'pending' ? (
+                      <span className="daycal-appt-pending" title="Pago pendiente de confirmación. Confirmalo desde Finanzas.">⏳</span>
                     ) : (
                       <button
                         className="daycal-appt-pay"
@@ -401,8 +428,10 @@ export default function Agenda({ focus }: { focus?: ViewFocus }) {
           onSaveAccount={addAccount}
           onClose={() => setPayFor(null)}
           onSave={async input => {
-            await addPayment(input)
-            await updateAppointment(payFor.id, { paid: true })
+            // Vinculamos el pago al turno. Si el pago queda pendiente de confirmar,
+            // el turno NO pasa a "pagado": muestra "Pago pendiente" hasta confirmarlo.
+            await addPayment({ ...input, appointment_id: payFor.id })
+            await updateAppointment(payFor.id, { paid: input.verified !== false })
             setPayFor(null)
           }}
         />
