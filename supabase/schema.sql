@@ -1265,3 +1265,116 @@ alter table public.payments
 create index if not exists payments_pending_idx on public.payments(user_id, verified);
 -- Para cruzar un turno con su pago.
 create index if not exists payments_appointment_idx on public.payments(appointment_id);
+
+-- =====================================================================
+-- 25) BANDEJA UNIFICADA — conversaciones y mensajes (inbox omnicanal)
+--     La CARA del cerebro. Cada conversación es un hilo con un cliente por
+--     algún canal (hoy 'web'; después 'whatsapp' | 'instagram' | 'mail').
+--     El campo MODE decide quién responde:
+--       'auto'   -> responde el agente IA (la Edge Function chat)
+--       'manual' -> el agente se frena y responde el humano (el dueño)
+--     Todo con RLS por dueño + policy admin (modo soporte), igual que el resto.
+--     Aditivo: no toca ninguna tabla existente.
+-- =====================================================================
+
+-- (a) Conversaciones (un hilo por cliente/canal)
+create table if not exists public.conversations (
+  id                  uuid primary key default gen_random_uuid(),
+  user_id             uuid not null references auth.users(id) on delete cascade,
+  channel             text not null default 'web',   -- web | whatsapp | instagram | mail
+  customer_name       text,                          -- null => se muestra "Cliente web"
+  customer_identifier text,                          -- web: id de sesión anónimo del visitante
+  status              text not null default 'open',  -- open | closed
+  mode                text not null default 'auto',  -- auto (responde el agente) | manual (responde el humano)
+  last_message_at     timestamptz not null default now(),
+  created_at          timestamptz not null default now()
+);
+
+-- Para listar el inbox del negocio ordenado por actividad reciente.
+create index if not exists conversations_user_idx on public.conversations(user_id, last_message_at desc);
+
+alter table public.conversations enable row level security;
+
+drop policy if exists "conversations_select_own" on public.conversations;
+create policy "conversations_select_own" on public.conversations
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "conversations_insert_own" on public.conversations;
+create policy "conversations_insert_own" on public.conversations
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "conversations_update_own" on public.conversations;
+create policy "conversations_update_own" on public.conversations
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "conversations_delete_own" on public.conversations;
+create policy "conversations_delete_own" on public.conversations
+  for delete using (auth.uid() = user_id);
+
+-- Modo soporte: el admin ve/edita las conversaciones del cliente (igual que el resto).
+drop policy if exists "conversations_admin_all" on public.conversations;
+create policy "conversations_admin_all" on public.conversations
+  for all using (public.is_current_user_admin()) with check (public.is_current_user_admin());
+
+grant select, insert, update, delete on public.conversations to anon, authenticated;
+
+-- (b) Mensajes (cada globo del chat)
+create table if not exists public.messages (
+  id              uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  user_id         uuid not null references auth.users(id) on delete cascade,
+  role            text not null,          -- customer | agent | human
+  content         text not null,
+  tokens_in       integer,                -- tokens de entrada que reportó Claude (para el contador futuro)
+  tokens_out      integer,                -- tokens de salida
+  created_at      timestamptz not null default now()
+);
+
+create index if not exists messages_conversation_idx on public.messages(conversation_id, created_at);
+create index if not exists messages_user_idx on public.messages(user_id);
+
+alter table public.messages enable row level security;
+
+drop policy if exists "messages_select_own" on public.messages;
+create policy "messages_select_own" on public.messages
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "messages_insert_own" on public.messages;
+create policy "messages_insert_own" on public.messages
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "messages_update_own" on public.messages;
+create policy "messages_update_own" on public.messages
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "messages_delete_own" on public.messages;
+create policy "messages_delete_own" on public.messages
+  for delete using (auth.uid() = user_id);
+
+-- Modo soporte: el admin ve/edita los mensajes del cliente.
+drop policy if exists "messages_admin_all" on public.messages;
+create policy "messages_admin_all" on public.messages
+  for all using (public.is_current_user_admin()) with check (public.is_current_user_admin());
+
+grant select, insert, update, delete on public.messages to anon, authenticated;
+
+-- (c) Realtime: la lista se reordena y los mensajes aparecen sin recargar.
+--     replica identity full => Realtime tiene la fila completa para evaluar RLS.
+alter table public.conversations replica identity full;
+alter table public.messages      replica identity full;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'conversations'
+  ) then
+    alter publication supabase_realtime add table public.conversations;
+  end if;
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'messages'
+  ) then
+    alter publication supabase_realtime add table public.messages;
+  end if;
+end $$;

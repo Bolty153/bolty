@@ -197,16 +197,47 @@ Deno.serve(async (req) => {
     return json({ error: 'Falta el secreto ANTHROPIC_API_KEY en Supabase. Cargalo y volvé a probar.' }, 500)
   }
 
-  // Leemos el mensaje del front.
-  let message: unknown
+  // Leemos el cuerpo. Aceptamos DOS formas:
+  //  1) { messages: [{ role, content }, ...] }  -> historial completo (la bandeja)
+  //  2) { message: "texto" }                    -> un solo turno (compat pantalla vieja)
+  // Así el agente tiene MEMORIA de la charla, no solo del último mensaje.
+  let body: { message?: unknown; messages?: unknown }
   try {
-    const body = await req.json()
-    message = body?.message
+    body = await req.json()
   } catch {
     return json({ error: 'El cuerpo del pedido no es JSON válido.' }, 400)
   }
-  if (typeof message !== 'string' || message.trim() === '') {
-    return json({ error: 'Mandá un campo "message" con texto.' }, 400)
+
+  type InMsg = { role?: unknown; content?: unknown }
+  let history: InMsg[] = []
+  if (Array.isArray(body?.messages)) {
+    history = body.messages as InMsg[]
+  } else if (typeof body?.message === 'string') {
+    history = [{ role: 'customer', content: body.message }]
+  }
+
+  // Normalizamos a los roles de la API de Claude:
+  //   customer -> user   |   agent/human -> assistant
+  // y descartamos turnos vacíos.
+  const normalized = history
+    .filter((m) => typeof m?.content === 'string' && (m.content as string).trim() !== '')
+    .map((m) => ({
+      role: (m.role === 'agent' || m.role === 'human' || m.role === 'assistant') ? 'assistant' : 'user',
+      content: (m.content as string).trim(),
+    }))
+
+  // La API exige que los turnos ALTERNEN user/assistant y ARRANQUEN en user.
+  // Colapsamos turnos consecutivos del mismo rol y sacamos assistant iniciales.
+  const chatMessages: { role: string; content: string }[] = []
+  for (const m of normalized) {
+    const last = chatMessages[chatMessages.length - 1]
+    if (last && last.role === m.role) last.content += '\n' + m.content
+    else chatMessages.push({ ...m })
+  }
+  while (chatMessages.length && chatMessages[0].role === 'assistant') chatMessages.shift()
+
+  if (chatMessages.length === 0) {
+    return json({ error: 'Mandá "messages" (historial) o "message" con texto.' }, 400)
   }
 
   // ── Contexto del negocio (server-side, con el user_id del JWT) ──
@@ -254,7 +285,7 @@ Deno.serve(async (req) => {
         model: MODEL,
         max_tokens: MAX_TOKENS,
         system: systemPrompt,
-        messages: [{ role: 'user', content: message }],
+        messages: chatMessages,
       }),
     })
   } catch (e) {

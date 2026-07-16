@@ -7,7 +7,7 @@
 >
 > **Cómo usar este archivo:** al abrir un chat nuevo, subilo o pegalo y escribí *"Seguimos con Bolty. Acá está todo el proyecto. Leé y seguimos donde quedamos."*
 >
-> Última actualización: **14/07/2026** — TANDA 2 (escalera de planes, contador de tokens, doble visibilidad del consumo, regla de oro del límite) + verificación del código (Agenda con empleados, rentabilidad por empleado, pagos pendientes de confirmación, medios de pago, buscador global ampliado, responsive completo).
+> Última actualización: **16/07/2026** — **EL CEREBRO YA ARRANCÓ**: Edge Function `chat` desplegada, conexión a Claude Haiku 4.5 funcionando (capa 1), personalidad del agente leyendo datos reales del negocio + `agent_configs` (capa 3), y la **Bandeja Unificada** (inbox omnicanal) construida como cara del cerebro con chat web + agente automático + freno manual y conteo de tokens guardado (capa 2). Incorpora además de la TANDA 2 (escalera de planes, medición de tokens, doble visibilidad del consumo, regla de oro del límite), el **plan por capas de la bandeja** y el **problema del catálogo grande**. Verificado contra el código real y los commits.
 
 ---
 
@@ -28,10 +28,10 @@
 
 Bolty (**B**usiness **O**nline **L**ive **T**echnology For **Y**ou) es una plataforma web **SaaS multi-tenant**. Empezó como "un empleado virtual con IA que atiende por WhatsApp", pero hoy **es más que eso: es un sistema de gestión con IA adentro** (inventario, agenda con empleados y disponibilidad real, finanzas con gastos y tarjetas, rentabilidad por empleado, búsqueda global, pagos pendientes) al que se le suma un agente que atiende clientes por WhatsApp, Instagram, chat web y mail. Ese cambio de posicionamiento importa para los precios (ver sección 4.1).
 
-El agente, cuando esté conectado al cerebro de IA (ver sección 6):
-- Responde con **IA real** (no respuestas fijas/guionadas), entrenado con los datos del negocio propio, como si le explicaran el trabajo a un empleado nuevo.
-- Consulta el **stock en tiempo real**.
-- **Agenda turnos** para negocios de servicios (sabiendo qué empleado hace qué servicio y a qué hora está libre).
+El agente (**el cerebro ya está arrancado** — ver secciones 3.10 y 6.1):
+- **Ya responde con IA real** (Claude Haiku 4.5, no respuestas fijas/guionadas), con la personalidad de *ese* negocio: sus datos, sus productos/servicios con precios, sus horarios y el tono configurado en "Mi agente". Se prueba desde la **Bandeja Unificada** (chat web propio, sin WhatsApp, sin riesgo).
+- (Próxima capa — "las manos") consultará el **stock en tiempo real** y la **disponibilidad de turnos** con *tools* en vez de tener todo el catálogo metido en el prompt (ver "problema del catálogo grande", 6.1).
+- **Agenda turnos** para negocios de servicios (sabiendo qué empleado hace qué servicio y a qué hora está libre) — pendiente de conectar como tool.
 - Responde en **varios idiomas**.
 - (A futuro) entiende audios y lee fotos de productos y comprobantes.
 
@@ -74,7 +74,7 @@ El agente, cuando esté conectado al cerebro de IA (ver sección 6):
 - **Onboarding** en 3 pasos (negocio → horarios → agente), persiste en Supabase (`onboarding_complete`); no se repite al volver a entrar.
 - **Inicio:** KPIs (vacíos hasta tener actividad real), "Primeros pasos", horarios, aviso de stock bajo, **saludo dinámico según la hora local** (Buenos días/tardes/noches), logo grande en la TopNav.
 - **Mi negocio:** nombre, rubro, descripción, dirección, teléfono, logo (Storage), horarios con turno cortado (2 turnos/día + "aplicar a todos los días").
-- **Mi agente:** nombre del agente, tono (formal/cercano/divertido/con modismos), tipo de negocio (solo productos / solo servicios / ambos) — define qué secciones ve el dashboard (Inventario, Servicios, Agenda, Equipo). Todo persiste en `agent_configs`, pero **todavía no controla ningún comportamiento real de IA** (no hay cerebro conectado aún).
+- **Mi agente:** nombre del agente, tono (formal/cercano/divertido/con modismos), tipo de negocio (solo productos / solo servicios / ambos) — define qué secciones ve el dashboard (Inventario, Servicios, Agenda, Equipo). Todo persiste en `agent_configs` y **el nombre, el tono y las instrucciones YA alimentan al agente real** (van en el system prompt del cerebro, ver 3.10).
 - **Funciones:** pantalla de toggles — es una **maqueta de configuración**, persiste en `localStorage` (no en Supabase) y **no está conectada a ningún agente real todavía**.
 - **Reportes:** 3 tarjetas ("¿Qué pregunta la gente?", "Lo más consultado", "Tu parte") — hoy son **estados vacíos**, esperando que el cerebro genere datos reales.
 - **Canales:** WhatsApp, Instagram, **Mail** y Chat en tu web listados como **"Sin conectar"** — UI armada, ninguna conexión real todavía. (El Mail ya figura como canal al mismo nivel que los otros; ver 6.4.)
@@ -135,6 +135,19 @@ Cuando un cliente manda un comprobante de transferencia, el pago se registra per
 - **Chip compacto ámbar** arriba de Finanzas (colapsado por defecto, con contador + total) que abre un **acordeón** con la lista completa: cada pendiente muestra todo para chequear en el banco de un vistazo (monto, cuenta + banco + número/alias/CBU cruzando `bank_accounts`, fecha, quién pagó, forma de pago). **KPI "Pendiente de confirmación"**. Botones **Confirmar** (→ verified=TRUE + verified_at, marca el turno pagado) y **Rechazar** (borra el pago; el turno vuelve a no pagado).
 - **Sincronizado con la Agenda:** el estado del turno se deriva del pago asociado — pago pendiente → badge ámbar "⏳ Pago pendiente"; pago confirmado (o turno marcado pagado) → verde "✓ Cobrado"; sin pago → botón `$`.
 - **Lo que falta (con IA):** que el agente detecte el comprobante por WhatsApp y cree el pago pendiente solo (depende del cerebro multimodal).
+
+### 3.10 🧠 EL CEREBRO — arrancado (capas 1, 2 y 3) — commits `51a038a`, `824217b` + trabajo en curso
+El cerebro **ya funciona**. Se construyó directo sobre la pantalla definitiva (la Bandeja), no sobre un "chat de prueba" descartable.
+
+- **Capa 1 — conexión segura (HECHO, `51a038a`):** Edge Function **`chat`** en Supabase (`supabase/functions/chat/index.ts`, corre en Deno del lado servidor). Recibe el mensaje, le pregunta a Claude y devuelve la respuesta. Modelo **`claude-haiku-4-5`**, `max_tokens` 1024. **La API key de Anthropic vive como secreto `ANTHROPIC_API_KEY` en Supabase, NUNCA en el front** (regla nº1). La función saca el `user_id` del **JWT** del usuario logueado y trae los datos del negocio ella misma (con RLS), no confía nada al navegador.
+- **Capa 3 — personalidad (HECHO, `824217b`):** la función arma un **system prompt** con los datos reales del negocio (nombre, rubro, descripción, zona, teléfono), los **horarios con turno cortado**, los **productos y servicios con precios/duración**, y la **personalidad configurada en `agent_configs`** (nombre del agente, tono, instrucciones del dueño). El agente deja de ser "Claude genérico" y se vuelve *el empleado de ese negocio*. Reglas duras en el prompt: usa solo la info del contexto (no inventa), no confirma turnos/pagos/ventas todavía, y **escribe estilo WhatsApp: sin markdown, respuestas cortas, y NO vuelca todo el catálogo de una** (ver "problema del catálogo grande", 6.1).
+- **Capa 2 — la Bandeja Unificada (CONSTRUIDA, en el working tree, aún sin commit):** el inbox omnicanal, **una sección más del menú** ("Conversaciones", `src/views/Bandeja.tsx`, ruta `bandeja` en `App.tsx`, ítem en `Sidebar.tsx` — visible siempre). Layout de dos columnas: lista de conversaciones a la izquierda, hilo abierto a la derecha (globos + composer). Cada conversación lleva su **ícono de canal** (hoy todas `web`, pero WhatsApp/Instagram/Mail ya están cableados en el tipo). Lo que ya hace:
+  - **Chat web con agente automático:** escribís como cliente y el agente responde solo (llama a la Edge Function con TODO el historial → tiene **memoria** de la charla, no solo del último mensaje; se mandan hasta 40 turnos).
+  - **Modelo híbrido (freno manual):** botón **"Tomar conversación"** pasa el hilo a modo `manual` (el agente se frena y respondés vos como negocio) y **"Devolver al agente"** vuelve a `auto`. En el composer elegís con qué "sombrero" escribís (👤 Cliente para probar / 🏢 Negocio).
+  - **Tiempo real (Supabase Realtime):** los mensajes y las conversaciones aparecen/reordenan sin recargar.
+  - **Conteo de tokens desde el minuto 1:** cada respuesta de Claude devuelve `usage` (input/output) y se guarda por mensaje (`messages.tokens_in` / `tokens_out`) — la base para medir costo/margen por cliente (ver 6.1). El panel de consumo que *lee* estos tokens todavía no está.
+  - **Tablas nuevas** (en `schema.sql` sección 25, **falta correr el SQL en Supabase**): `conversations` (channel, customer_name, status, **mode** auto/manual, last_message_at) y `messages` (role customer/agent/human, content, tokens_in/out), ambas con RLS por dueño + policy admin (modo soporte) y agregadas a la publicación de Realtime. Hooks: `useConversations.ts`, `useMessages.ts`.
+- **Lo que falta del cerebro:** **capa 4 (las manos / tools)** para catálogo grande y agendar de verdad, **capa 5 (panel de tokens/costo)** que lea lo que ya se guarda, y conectar los canales reales encima de la misma bandeja. Ver 6.1.
 
 ---
 
@@ -201,10 +214,10 @@ Cuando un cliente manda un comprobante de transferencia, el pago se registra per
 - **Base de datos + Auth + Storage:** Supabase, con RLS (cada cliente ve solo sus datos). Project URL: `https://gvjpohtrdiujvokliygn.supabase.co` (región São Paulo). Se usa la clave publicable (`sb_publishable_...`), no la secreta. Datos locales en `.env.local` (no se sube a GitHub).
 - **Hosting:** Vercel (plan Hobby) → **bolty-two.vercel.app**, deploy automático desde GitHub. Env vars cargadas en Vercel (Settings → Environment Variables).
 - **Repositorio:** GitHub → **Bolty153/bolty**, rama `master`. Cuenta Bolty153 / `bolty.arg.ia@gmail.com` (personal: `nicolasmateos153@gmail.com`).
-- **API de Claude (Anthropic):** todavía **no integrada en el código** (no hay Edge Functions ni llamadas a la API en `src/`) — es el próximo gran paso ("el cerebro"). Cuenta de API separada del Claude Pro personal.
+- **API de Claude (Anthropic):** **ya integrada** vía **Edge Function de Supabase** (`supabase/functions/chat`, Deno) que llama a Claude **Haiku 4.5**. La API key vive como secreto `ANTHROPIC_API_KEY` en Supabase (nunca en el front). El front la invoca con `supabase.functions.invoke('chat', ...)`. Cuenta de API separada del Claude Pro personal. Ver 3.10.
 
 ### 5.1 Tablas en Supabase (verificado contra `supabase/schema.sql` + código)
-`supabase/schema.sql` es idempotente y **contiene**: `business_profiles`, `agent_configs`, `products`, `services`, `appointments`, `customers`, `payments`, `bank_accounts`, `plan_requests`, `support_tickets`, `support_access_requests`, `expenses`, `cards`, **`employees`**, **`employee_services`**. Extensión `unaccent` para el buscador (RPC `global_search`).
+`supabase/schema.sql` es idempotente y **contiene**: `business_profiles`, `agent_configs`, `products`, `services`, `appointments`, `customers`, `payments`, `bank_accounts`, `plan_requests`, `support_tickets`, `support_access_requests`, `expenses`, `cards`, **`employees`**, **`employee_services`**, y las nuevas de la bandeja: **`conversations`** y **`messages`** (sección 25 del SQL — **falta correr ese bloque en Supabase**). Extensión `unaccent` para el buscador (RPC `global_search`).
 
 > **Importante:** las tablas del lado admin — `profiles` (is_active, is_admin, must_change_password), `clients` y `plans` — **NO están en `schema.sql`**, se crearon a mano en el SQL Editor y no quedaron guardadas en el repo. Si hay que recrear la base desde cero, falta ese SQL — conviene rescatarlo de transcripts viejos o reconstruirlo y agregarlo al archivo.
 
@@ -214,12 +227,28 @@ Buckets de Storage: `logos`, `productos`, `remitos`, `servicios`, `soporte`.
 
 ## 6. Lo que falta hacer (hoja de ruta)
 
-### 6.1 Núcleo / inteligencia — EL GRAN PRÓXIMO PASO
-- **El cerebro:** conectar la API de Claude (Anthropic) para que el agente responda de verdad con los datos del negocio. Requiere backend seguro (Edge Function de Supabase) para no exponer la API key. Probar primero en un chat web propio de Bolty, sin WhatsApp. (Crear cuenta de API en `console.anthropic.com`, cargar saldo $5-10, recarga automática + límite de gasto, usar Haiku.)
+### 6.1 Núcleo / inteligencia — EL CEREBRO (ya arrancado, ver 3.10)
+**Ya HECHO:** capa 1 (Edge Function segura → Claude Haiku), capa 3 (personalidad con datos reales del negocio) y capa 2 (la Bandeja Unificada con chat web, agente automático, freno manual y conteo de tokens guardado). Falta la capa 4 (las manos/tools), la capa 5 (panel de consumo), y sumar los canales reales encima de la misma bandeja.
+
+> **📥 LA BANDEJA UNIFICADA = LA CARA DEL CEREBRO (plan por capas).** En vez de un "chat de prueba" descartable, el cerebro se construye directo sobre la pantalla DEFINITIVA: la **bandeja unificada (inbox omnicanal)**, una **sección más del menú** ("Conversaciones"). Todas las charlas de todos los canales (WhatsApp, Instagram, mail, chat web) en una pantalla, con el iconito del canal en cada una, para que el dueño no salte entre 4 apps. Se avanza de lo más seguro a lo más expuesto; cada capa se prueba antes de la siguiente:
+> 1. **Conexión básica a la API** ("hola mundo") en un **backend seguro** (Edge Function de Supabase), nunca desde el navegador (si la key queda en el front, te la roban). **Regla nº1.** ✅ HECHO.
+> 2. **Bandeja mínima + chat web:** la bandeja mostrando el canal `web` (que no necesita trámite). Escribís como cliente y el agente responde ahí. Es el laboratorio Y la pantalla final a la vez. ✅ HECHO (con freno manual híbrido y Realtime).
+> 3. **Personalidad (system prompt):** el agente se vuelve *el empleado de ESE negocio* (quién es, qué vende, horarios, tono). ✅ HECHO.
+> 4. **Las manos (tools):** el agente CONSULTA la base — stock real, disponibilidad de turnos (la RPC ya verificada), agendar. No inventa: consulta y responde con datos reales. Acá se conecta todo lo construido. ⏳ PENDIENTE.
+>    - **⚠️ PROBLEMA DEL CATÁLOGO GRANDE (detectado 15/07, muy importante) — dos partes:**
+>      - **(a) Comportamiento:** el agente NO debe volcar toda la lista de una cuando le dicen "quiero saber de servicios". Un vendedor pregunta primero qué busca la persona y recomienda; solo manda todo si el cliente PIDE la lista completa. → **Ya mitigado en el prompt** (regla "respuestas cortas, no pegues el catálogo entero", ver 3.10); se afina con la práctica.
+>      - **(b) Técnico (más grave, PENDIENTE):** hoy el catálogo entero va metido en el system prompt (con un tope de 200 productos y 200 servicios). Con 4 productos anda; **con 1000 productos y 20 servicios es inviable** — no entra y cuesta carísimo (esa lista viaja a la IA en CADA mensaje = muchos tokens = mucha plata por conversación). **Solución = las manos:** que el agente BUSQUE en el catálogo solo lo que necesita (tool "buscar producto/servicio") en vez de tener todo encima. Es una de las manos MÁS importantes para que Bolty sirva en negocios con catálogo grande.
+> 5. **Contador de tokens** desde el minuto 1 (no es opcional). ✅ Los tokens ya se **guardan** por mensaje (`tokens_in`/`tokens_out`); falta el **panel que los lea** y los cruce con el plan (ver "Medición de consumo" abajo).
+>
+> **Después, cada canal que se conecta CAE en la misma bandeja** (no cambia la pantalla, se llena de más fuentes): chat web → WhatsApp → Instagram → mail.
+> **Modelo HÍBRIDO:** el agente responde solo, pero el dueño puede "tomar" la conversación cuando quiera (ya implementado el freno) y —con el multi-usuario— ver quién la está atendiendo (engancha con los roles). La IA hace el 90%, el humano interviene en el caso difícil. Faltan **notas internas** y la **derivación inteligente automática** a humano (enojo/reclamo).
+> **La bandeja "completa" (como la referencia visual que trajo el usuario) es la META, no el día 1:** se arrancó con la versión mínima (chat web + agente) y se suma encima.
+
+Otros pendientes del núcleo:
 - **Entrenador conversacional:** que el dueño le hable al agente como a un empleado nuevo (texto y audio) y aprenda charlando, sin formularios. El usuario lo quiere **innovador, "el mejor de todos"**.
 - **Asistente virtual de Bolty:** al tocar la mascota, que abra un asistente de ayuda dentro del panel.
 - **Multimodal:** entender audios y leer fotos de productos, incluida la lectura automática de remitos y de **comprobantes de pago** (la parte de Finanzas ya está hecha, ver 3.9; falta la lectura automática con IA).
-- **Conectar la config real:** que los switches de "Funciones", el tono y las instrucciones de "Mi agente" controlen de verdad al agente (hoy son maquetas/preferencias guardadas).
+- **Conectar la config real:** el **tono y las instrucciones de "Mi agente" YA controlan al agente** (van en el system prompt, ver 3.10). Falta que los **switches de "Funciones"** (hoy maqueta en `localStorage`) enciendan/apaguen capacidades de verdad.
 - **Que el agente responda LINDO:** formato (negrita/emojis/listas), fotos de productos (catálogo), botones/listas interactivas de WhatsApp, entender y responder audios.
 
 **📊 Medición de consumo y costo (CRÍTICO — construir JUNTO con el cerebro):**
@@ -350,7 +379,8 @@ ESCENA 6 (visual: fondo oscuro premium; aparece el logo de Bolty —la letra B c
 
 - **Maestro único:** este archivo, `bolty-proyecto-maestro.md`, en la raíz del proyecto. Conviene subirlo a GitHub y arrastrarlo a chats nuevos. (Reemplazó a `bolty-resumen-maestro.md`, ya borrado.)
 - `bolty-dashboard.html` — prototipo viejo, no se toca.
-- `supabase/schema.sql` — todo el SQL idempotente de las tablas del lado negocio (ver salvedad en 5.1 sobre `profiles`/`clients`/`plans`).
+- `supabase/schema.sql` — todo el SQL idempotente de las tablas del lado negocio (ver salvedad en 5.1 sobre `profiles`/`clients`/`plans`); la sección 25 (bandeja) **está en el archivo pero falta correrla en Supabase**.
+- **Cerebro / Bandeja:** `supabase/functions/chat/index.ts` (Edge Function), `src/views/Bandeja.tsx`, `src/hooks/useConversations.ts`, `src/hooks/useMessages.ts` (ver 3.10).
 - Mascota: `public/bolty-mascota.png` (poster/respaldo, con fondo) y `public/bolty-animado.webm` (el real, transparente).
 - Transcripts de chats anteriores (con SQL y capturas viejas) no forman parte del repo — rescatar algo puntual si hace falta.
 
@@ -358,13 +388,14 @@ ESCENA 6 (visual: fondo oscuro premium; aparece el logo de Bolty —la letra B c
 
 ## 10. Orden de trabajo sugerido (próximos pasos)
 
-1. **El cerebro:** backend (Edge Function) + API de Claude para que el agente responda de verdad, probando primero en el **chat web propio de Bolty**. Junto con esto, construir la **medición de tokens/costo/margen por cliente** (regla de oro + doble visibilidad, 6.1).
-2. **Conectar WhatsApp** (primer canal real, embedded signup). En paralelo, mail y chat web (más fáciles).
-3. **Permisos y límites por plan** + **multi-usuario con roles** (6.3).
-4. **Cobros con Mercado Pago.**
-5. Sumar Instagram, audios y fotos, multi-idioma.
-6. **Ajuste fino del buscador** (6.6) y **costo/margen por producto** (6.5) cuando convenga.
-7. **Trámites** (marca, WhatsApp API, dominio, legal) en paralelo.
+1. **El cerebro — seguir:** capas 1-3 ya andan (Edge Function + personalidad + Bandeja con chat web y freno manual). Próximo: **correr el SQL de la sección 25** en Supabase (tablas `conversations`/`messages`), **commitear la Bandeja**, y encarar la **capa 4 (las manos/tools)** — arrancando por la tool de **buscar en el catálogo** (resuelve el problema del catálogo grande, 6.1) y la de **disponibilidad/agendar turnos**.
+2. **Panel de consumo (capa 5):** leer los `tokens_in`/`tokens_out` que ya se guardan y armar la **medición de tokens/costo/margen por cliente** (regla de oro + doble visibilidad, 6.1).
+3. **Conectar WhatsApp** (primer canal real, embedded signup) sobre la misma bandeja. En paralelo, mail y chat web embebible (más fáciles).
+4. **Permisos y límites por plan** + **multi-usuario con roles** (6.3).
+5. **Cobros con Mercado Pago.**
+6. Sumar Instagram, audios y fotos, multi-idioma.
+7. **Ajuste fino del buscador** (6.6) y **costo/margen por producto** (6.5) cuando convenga.
+8. **Trámites** (marca, WhatsApp API, dominio, legal) en paralelo.
 
 ---
 

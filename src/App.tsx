@@ -11,6 +11,7 @@ import Reportes from './views/Reportes'
 import Agenda from './views/Agenda'
 import Equipo from './views/Equipo'
 import Canales from './views/Canales'
+import Bandeja from './views/Bandeja'
 import MiNegocio from './views/MiNegocio'
 import Productos from './views/Productos'
 import Servicios from './views/Servicios'
@@ -25,7 +26,7 @@ import CustomerFicha from './components/search/CustomerFicha'
 import type { NavFocus } from './components/search/GlobalSearch'
 import type { Customer } from './hooks/useCustomers'
 
-export type ViewId = 'inicio' | 'agente' | 'funciones' | 'reportes' | 'agenda' | 'equipo' | 'canales' | 'negocio' | 'productos' | 'servicios' | 'finanzas'
+export type ViewId = 'inicio' | 'agente' | 'funciones' | 'reportes' | 'agenda' | 'equipo' | 'canales' | 'bandeja' | 'negocio' | 'productos' | 'servicios' | 'finanzas'
 
 // Foco de navegación: al abrir un resultado del buscador prefiltramos la vista
 // destino. `ts` fuerza que el efecto de la vista se dispare aunque el término repita.
@@ -41,6 +42,7 @@ function renderView(view: ViewId, onNavigate: (v: ViewId) => void, focus: ViewFo
     case 'agenda':    return <Agenda focus={f} />
     case 'equipo':    return <Equipo />
     case 'canales':   return <Canales />
+    case 'bandeja':   return <Bandeja />
     case 'negocio':   return <MiNegocio onNavigate={onNavigate} />
     case 'productos': return <Productos focus={f} />
     case 'servicios': return <Servicios focus={f} />
