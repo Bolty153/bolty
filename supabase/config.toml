@@ -1,0 +1,8 @@
+# Config mínima de Supabase CLI para este proyecto.
+# project_id es solo un nombre local; el vínculo con tu proyecto real lo hace
+# `supabase link --project-ref <tu-ref>` (ver los pasos que te pasé).
+project_id = "bolty"
+
+# La función "chat" exige sesión (JWT) para que solo tu app logueada pueda usarla.
+[functions.chat]
+verify_jwt = true
