@@ -110,5 +110,16 @@ export function useConversations() {
     if (error) console.error('[Bolty] set mode:', error.message)
   }, [])
 
-  return { conversations, loading, reload: load, createTestConversation, setMode }
+  // Borra la conversación entera (sus mensajes se van solos por FK on delete cascade).
+  // RLS: solo el dueño puede borrar lo suyo. Optimista + reload si algo falla.
+  const deleteConversation = useCallback(async (id: string) => {
+    setConversations((prev) => prev.filter((c) => c.id !== id))
+    const { error } = await supabase.from('conversations').delete().eq('id', id)
+    if (error) {
+      console.error('[Bolty] delete conversation:', error.message)
+      load()
+    }
+  }, [load])
+
+  return { conversations, loading, reload: load, createTestConversation, setMode, deleteConversation }
 }

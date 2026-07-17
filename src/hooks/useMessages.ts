@@ -72,6 +72,14 @@ export function useMessages(conversationId: string | null, mode: ConvMode) {
           setMessages((prev) => (prev.some((m) => m.id === row.id) ? prev : [...prev, row]))
         },
       )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+        (payload) => {
+          const oldId = (payload.old as { id?: string })?.id
+          if (oldId) setMessages((prev) => prev.filter((m) => m.id !== oldId))
+        },
+      )
       .subscribe()
     return () => {
       supabase.removeChannel(ch)
@@ -175,5 +183,18 @@ export function useMessages(conversationId: string | null, mode: ConvMode) {
     [insertMessage],
   )
 
-  return { messages, loading, agentThinking, error, sendAsCustomer, sendAsHuman, reload: load }
+  // Borra un mensaje puntual. RLS: solo el dueño borra lo suyo. Optimista + reload si falla.
+  const deleteMessage = useCallback(
+    async (id: string) => {
+      setMessages((prev) => prev.filter((m) => m.id !== id))
+      const { error: e } = await supabase.from('messages').delete().eq('id', id)
+      if (e) {
+        console.error('[Bolty] delete message:', e.message)
+        load()
+      }
+    },
+    [load],
+  )
+
+  return { messages, loading, agentThinking, error, sendAsCustomer, sendAsHuman, deleteMessage, reload: load }
 }

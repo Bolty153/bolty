@@ -166,11 +166,10 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
   ]
   const fullMainNav: NavItemDef[] = [mainNav[0], mainNav[1], ...catalogNav, ...mainNav.slice(2)]
 
-  // Conversaciones (la bandeja) y Canales se muestran siempre; Agenda y Equipo
-  // sólo si el negocio trabaja con turnos.
-  const servicesNav: NavItemDef[] = showAgenda
-    ? [bandejaNav, agendaNav, equipoNav, canalesNav]
-    : [bandejaNav, canalesNav]
+  // Atención al cliente: Conversaciones (la bandeja) y Canales — se muestran siempre.
+  const comunicacionNav: NavItemDef[] = [bandejaNav, canalesNav]
+  // Gestión operativa: Agenda y Equipo, sólo si el negocio trabaja con turnos.
+  const servicesNav: NavItemDef[] = showAgenda ? [agendaNav, equipoNav] : []
 
   const { business } = useBusinessContext()
   const { requestChange } = usePlanRequests()
@@ -212,8 +211,8 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
         ))}
 
         <div className="nav-sep" />
-        <div className="nav-label">Servicios</div>
-        {servicesNav.map(item => (
+        <div className="nav-label">Atención</div>
+        {comunicacionNav.map(item => (
           <button
             key={item.id}
             className={`nav-item${activeView === item.id ? ' active' : ''}`}
@@ -223,6 +222,23 @@ export default function Sidebar({ activeView, onNavigate, showProductos, showSer
             {item.label}
           </button>
         ))}
+
+        {servicesNav.length > 0 && (
+          <>
+            <div className="nav-sep" />
+            <div className="nav-label">Servicios</div>
+            {servicesNav.map(item => (
+              <button
+                key={item.id}
+                className={`nav-item${activeView === item.id ? ' active' : ''}`}
+                onClick={() => onNavigate(item.id)}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            ))}
+          </>
+        )}
 
         <div className="nav-sep" />
         <div className="nav-label">Soporte y ayuda</div>

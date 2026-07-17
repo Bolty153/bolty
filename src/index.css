@@ -2545,10 +2545,22 @@ h1,h2,h3,h4,h5,.disp {
    Layout de dos columnas: lista (izq) + conversación abierta (der).
    En mobile se ve una sola a la vez (lista -> chat a pantalla completa).
    ===================================================================== */
+/* La bandeja ocupa casi toda el área de contenido. Cuando la vista activa es la
+   bandeja, App.tsx le pone `main-flush` a <main>: le saca el margen/max-width y lo
+   vuelve una columna flex, así el shell llena el alto disponible (no un calc fijo). */
+/* Alto explícito (viewport menos la topnav de 62px) para que el shell quede ACOTADO
+   a la pantalla: así scrollean solo los mensajes y el composer queda fijo abajo del
+   chat, en vez de crecer con el contenido y empujar todo (scroll de página). */
+.main.main-flush {
+  height: calc(100vh - 62px); overflow: hidden;
+  padding: 12px; max-width: none; display: flex; flex-direction: column;
+}
+.main.main-flush .view-anim { flex: 1 1 auto; min-height: 0; display: flex; }
+
 .inbox-shell {
   display: flex; overflow: hidden;
-  height: calc(100vh - 150px); min-height: 480px;
-  background: var(--surf); border: 1px solid var(--line); border-radius: var(--rl);
+  flex: 1 1 auto; min-height: 420px;
+  background: var(--surf); border: 1px solid var(--line); border-radius: 16px;
   box-shadow: var(--sh-s);
 }
 
@@ -2605,6 +2617,15 @@ h1,h2,h3,h4,h5,.disp {
 .inbox-chan svg { width: 13px; height: 13px; }
 .inbox-chan.sm { width: 20px; height: 20px; }
 .inbox-mode-tag { flex-shrink: 0; font-size: 13px; margin-left: 2px; }
+/* Borrar la conversación entera: tacho que aparece al pasar el mouse (en mobile va siempre visible) */
+.inbox-del {
+  flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px; border: none; background: transparent;
+  color: var(--ink-faint); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: all .15s;
+}
+.inbox-del svg { width: 16px; height: 16px; }
+.inbox-item:hover .inbox-del { opacity: 1; }
+.inbox-del:hover { background: var(--rose-wash); color: var(--rose); }
 
 /* ── Columna derecha: conversación ── */
 .inbox-thread { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
@@ -2644,14 +2665,30 @@ h1,h2,h3,h4,h5,.disp {
 .msg-row { display: flex; }
 .msg-row.in { justify-content: flex-start; }
 .msg-row.out { justify-content: flex-end; }
+.msg-wrap { display: flex; align-items: center; gap: 4px; max-width: min(680px, 78%); min-width: 0; }
+.msg-row.out .msg-wrap { flex-direction: row-reverse; }  /* el tacho queda del lado interno */
 .msg-bubble {
-  max-width: 74%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.5;
+  /* Reservamos el ancho del tacho (26px) + el gap (4px) para que el globo no se
+     desborde del wrap. Sin esto, globo(100%) + tacho sumaban más que el wrap y el
+     saliente se iba fuera de pantalla en mobile (se veía cortado). */
+  max-width: calc(100% - 30px); min-width: 0;
+  padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.5;
   white-space: pre-wrap; word-break: break-word; box-shadow: var(--sh-s);
 }
 .msg-bubble.customer { background: var(--surf); border: 1px solid var(--line); color: var(--ink); border-bottom-left-radius: 5px; }
 .msg-bubble.agent { background: linear-gradient(135deg, var(--volt-2), var(--volt)); color: #fff; border-bottom-right-radius: 5px; }
 .msg-bubble.human { background: var(--ink); color: #fff; border-bottom-right-radius: 5px; }
 .msg-role { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; opacity: .8; margin-bottom: 3px; }
+
+/* Borrar un mensaje: aparece al pasar el mouse (desktop) o con long-press (mobile, clase .show) */
+.msg-del {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px; border: none; background: transparent;
+  color: var(--ink-faint); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .15s, background .15s, color .15s;
+}
+.msg-del svg { width: 15px; height: 15px; }
+.msg-row:hover .msg-del, .msg-del.show { opacity: 1; }
+.msg-del:hover { background: var(--rose-wash); color: var(--rose); }
 
 /* Agente escribiendo… */
 .msg-bubble.typing { display: flex; gap: 4px; align-items: center; padding: 13px 16px; }
@@ -2706,10 +2743,36 @@ h1,h2,h3,h4,h5,.disp {
   font-family: 'Space Grotesk'; font-weight: 600; font-size: 13px; cursor: pointer;
 }
 
+/* ── Diálogo de confirmación (borrar conversación / mensaje) ── */
+.confirm-overlay {
+  position: fixed; inset: 0; z-index: 1000; background: rgba(19,17,28,.45);
+  display: flex; align-items: center; justify-content: center; padding: 20px; animation: fade .15s ease;
+}
+.confirm-card {
+  background: var(--surf); border: 1px solid var(--line); border-radius: 16px;
+  padding: 22px 22px 18px; width: 100%; max-width: 380px; box-shadow: var(--sh-m);
+}
+.confirm-card h3 { font-size: 16.5px; font-weight: 700; margin-bottom: 8px; }
+.confirm-card p { font-size: 13.5px; color: var(--ink-soft); line-height: 1.6; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.confirm-cancel, .confirm-danger {
+  font-family: 'Space Grotesk'; font-size: 13.5px; font-weight: 600; padding: 9px 16px; border-radius: 10px;
+  cursor: pointer; border: 1px solid transparent; transition: all .15s;
+}
+.confirm-cancel { background: var(--surf-2); color: var(--ink-2); border-color: var(--line); }
+.confirm-cancel:hover { background: var(--line); }
+.confirm-danger { background: var(--rose); color: #fff; }
+.confirm-danger:hover { filter: brightness(.95); }
+
 /* ── Mobile: una columna a la vez ── */
 @media (max-width: 768px) {
+  /* Full-bleed en celular: sin márgenes que la achiquen. El sidebar es off-canvas
+     (position:fixed), así que no hay hermano flex que fije la altura -> alto explícito.
+     Usamos dvh (viewport dinámico) para que el composer quede visible sobre el teclado. */
+  .main.main-flush { padding: 0; height: calc(100dvh - 62px); }
   .inbox-shell {
-    height: calc(100dvh - 128px); min-height: 420px; border-radius: 14px;
+    flex: none; height: calc(100dvh - 62px); min-height: 0;
+    border-radius: 0; border-left: none; border-right: none; border-bottom: none;
   }
   .inbox-list { width: 100%; border-right: none; }
   .inbox-shell.has-open .inbox-list { display: none; }
@@ -2720,6 +2783,8 @@ h1,h2,h3,h4,h5,.disp {
   .inbox-mode-badge { display: none; }        /* el botón + la etiqueta de la lista ya indican el modo */
   .inbox-mode-btn { padding: 8px 12px; font-size: 12px; }
   .inbox-thread-body { padding: 16px 14px; }
-  .msg-bubble { max-width: 84%; }
+  .msg-wrap { max-width: 88%; }
   .inbox-thread-id h3 { font-size: 15px; }
+  /* Sin hover en mobile: el tacho de la conversación va siempre visible */
+  .inbox-del { opacity: 1; }
 }

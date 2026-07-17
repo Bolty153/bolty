@@ -103,7 +103,7 @@ function DashboardContent() {
           mobileOpen={sidebarOpen}
           onMobileClose={() => setSidebarOpen(false)}
         />
-        <main className="main">
+        <main className={`main${safeView === 'bandeja' ? ' main-flush' : ''}`}>
           <div key={safeView} className="view-anim">
             {renderView(safeView, v => navigateTo(v), focus)}
           </div>

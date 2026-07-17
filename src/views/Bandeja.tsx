@@ -10,7 +10,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useConversations, type Channel, type Conversation } from '../hooks/useConversations'
-import { useMessages, type MsgRole } from '../hooks/useMessages'
+import { useMessages, type Message } from '../hooks/useMessages'
 
 // ── Ícono + estilo por canal (multicanal-ready) ────────────────────────────────
 const channelMeta: Record<Channel, { label: string; style: React.CSSProperties; icon: React.ReactNode }> = {
@@ -71,21 +71,63 @@ function formatTime(iso: string) {
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
 }
 
+// Ícono de tacho (reutilizado en lista y globos)
+const trashIcon = (
+  <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />
+  </svg>
+)
+
+// ── Diálogo de confirmación (borrado) ─────────────────────────────────────────────
+function ConfirmDialog({
+  title,
+  message,
+  onConfirm,
+  onCancel,
+}: {
+  title: string
+  message: string
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="confirm-overlay" onClick={onCancel}>
+      <div className="confirm-card" onClick={(e) => e.stopPropagation()}>
+        <h3>{title}</h3>
+        <p>{message}</p>
+        <div className="confirm-actions">
+          <button className="confirm-cancel" onClick={onCancel}>Cancelar</button>
+          <button className="confirm-danger" onClick={onConfirm}>Eliminar</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Ítem de la lista ────────────────────────────────────────────────────────────
+// Es un div (no button) para poder anidar el botón de borrar sin romper el HTML.
 function ConvListItem({
   conv,
   active,
   preview,
   onClick,
+  onDelete,
 }: {
   conv: Conversation
   active: boolean
   preview: string
   onClick: () => void
+  onDelete: () => void
 }) {
   const ch = channelMeta[conv.channel] ?? channelMeta.web
   return (
-    <button className={`inbox-item${active ? ' active' : ''}`} onClick={onClick}>
+    <div
+      className={`inbox-item${active ? ' active' : ''}`}
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
+    >
       <div className="inbox-av">{initialOf(conv)}</div>
       <div className="inbox-item-body">
         <div className="inbox-item-top">
@@ -100,7 +142,15 @@ function ConvListItem({
         </div>
       </div>
       {conv.mode === 'manual' && <span className="inbox-mode-tag manual" title="Vos respondés">✋</span>}
-    </button>
+      <button
+        className="inbox-del"
+        title="Eliminar conversación"
+        aria-label="Eliminar conversación"
+        onClick={(e) => { e.stopPropagation(); onDelete() }}
+      >
+        {trashIcon}
+      </button>
+    </div>
   )
 }
 
@@ -116,11 +166,14 @@ function Thread({
   onSetMode: (mode: 'auto' | 'manual') => void
   onPreview: (text: string) => void
 }) {
-  const { messages, loading, agentThinking, error, sendAsCustomer, sendAsHuman } = useMessages(conv.id, conv.mode)
+  const { messages, loading, agentThinking, error, sendAsCustomer, sendAsHuman, deleteMessage } = useMessages(conv.id, conv.mode)
   const [text, setText] = useState('')
   // Con qué "sombrero" escribo: como cliente (para probar) o como negocio (humano).
   // El default sigue al modo, pero se puede cambiar para testear ambos lados.
   const [writeAs, setWriteAs] = useState<'customer' | 'human'>(conv.mode === 'auto' ? 'customer' : 'human')
+  // Borrado de mensajes: cuál está "revelado" (long-press mobile) y cuál se está por confirmar.
+  const [revealedMsgId, setRevealedMsgId] = useState<string | null>(null)
+  const [confirmMsgId, setConfirmMsgId] = useState<string | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -185,7 +238,15 @@ function Thread({
             Todavía no hay mensajes. Escribí abajo como si fueras un cliente y mirá cómo responde tu agente.
           </div>
         ) : (
-          messages.map((m) => <Bubble key={m.id} role={m.role} content={m.content} />)
+          messages.map((m) => (
+            <Bubble
+              key={m.id}
+              m={m}
+              revealed={revealedMsgId === m.id}
+              onReveal={() => setRevealedMsgId(m.id)}
+              onRequestDelete={() => setConfirmMsgId(m.id)}
+            />
+          ))
         )}
         {agentThinking && (
           <div className="msg-row agent">
@@ -241,19 +302,62 @@ function Thread({
           </button>
         </div>
       </div>
+
+      {confirmMsgId && (
+        <ConfirmDialog
+          title="Eliminar mensaje"
+          message="¿Seguro que querés eliminar este mensaje? No se puede deshacer."
+          onCancel={() => { setConfirmMsgId(null); setRevealedMsgId(null) }}
+          onConfirm={async () => {
+            const id = confirmMsgId
+            setConfirmMsgId(null)
+            setRevealedMsgId(null)
+            await deleteMessage(id)
+          }}
+        />
+      )}
     </section>
   )
 }
 
-function Bubble({ role, content }: { role: MsgRole; content: string }) {
+function Bubble({
+  m,
+  revealed,
+  onReveal,
+  onRequestDelete,
+}: {
+  m: Message
+  revealed: boolean
+  onReveal: () => void
+  onRequestDelete: () => void
+}) {
   // customer = entrante (izquierda) · agent/human = saliente (derecha)
-  const outgoing = role !== 'customer'
-  const label = role === 'agent' ? 'Agente' : role === 'human' ? 'Vos' : null
+  const outgoing = m.role !== 'customer'
+  const label = m.role === 'agent' ? 'Agente' : m.role === 'human' ? 'Vos' : null
+  // Mobile: mantener presionado (long-press) revela el botón de borrar.
+  const pressTimer = useRef<number | undefined>(undefined)
+  const startPress = () => { pressTimer.current = window.setTimeout(onReveal, 500) }
+  const cancelPress = () => { if (pressTimer.current) window.clearTimeout(pressTimer.current) }
   return (
-    <div className={`msg-row ${role}${outgoing ? ' out' : ' in'}`}>
-      <div className={`msg-bubble ${role}`}>
-        {label && <span className="msg-role">{label}</span>}
-        {content}
+    <div className={`msg-row ${m.role}${outgoing ? ' out' : ' in'}`}>
+      <div className="msg-wrap">
+        <div
+          className={`msg-bubble ${m.role}`}
+          onTouchStart={startPress}
+          onTouchEnd={cancelPress}
+          onTouchMove={cancelPress}
+        >
+          {label && <span className="msg-role">{label}</span>}
+          {m.content}
+        </div>
+        <button
+          className={`msg-del${revealed ? ' show' : ''}`}
+          title="Eliminar mensaje"
+          aria-label="Eliminar mensaje"
+          onClick={onRequestDelete}
+        >
+          {trashIcon}
+        </button>
       </div>
     </div>
   )
@@ -261,9 +365,10 @@ function Bubble({ role, content }: { role: MsgRole; content: string }) {
 
 // ── Vista principal ───────────────────────────────────────────────────────────────
 export default function Bandeja() {
-  const { conversations, loading, createTestConversation, setMode } = useConversations()
+  const { conversations, loading, createTestConversation, setMode, deleteConversation } = useConversations()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [previews, setPreviews] = useState<Record<string, string>>({})
+  const [confirmConv, setConfirmConv] = useState<Conversation | null>(null)
 
   // Al cargar, seleccionamos la primera conversación (en desktop). En mobile
   // arranca sin selección para que se vea la lista completa.
@@ -285,6 +390,7 @@ export default function Bandeja() {
   }
 
   return (
+    <>
     <div className={`inbox-shell${selected ? ' has-open' : ''}`}>
       {/* IZQUIERDA: lista de conversaciones */}
       <aside className="inbox-list">
@@ -314,6 +420,7 @@ export default function Bandeja() {
                 active={c.id === selectedId}
                 preview={previews[c.id] ?? ''}
                 onClick={() => setSelectedId(c.id)}
+                onDelete={() => setConfirmConv(c)}
               />
             ))
           )}
@@ -341,5 +448,20 @@ export default function Bandeja() {
         </section>
       )}
     </div>
+
+    {confirmConv && (
+      <ConfirmDialog
+        title="Eliminar conversación"
+        message="¿Seguro que querés eliminar esta conversación? Se borran todos sus mensajes. No se puede deshacer."
+        onCancel={() => setConfirmConv(null)}
+        onConfirm={async () => {
+          const id = confirmConv.id
+          setConfirmConv(null)
+          if (selectedId === id) setSelectedId(null)
+          await deleteConversation(id)
+        }}
+      />
+    )}
+    </>
   )
 }
