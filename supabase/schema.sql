@@ -1378,3 +1378,77 @@ begin
     alter publication supabase_realtime add table public.messages;
   end if;
 end $$;
+
+-- =====================================================================
+-- 26. Agendar turno (RPC atómica)
+--     Cierra la carrera front-check -> insert que hoy deja pasar turnos
+--     solapados (la base no tiene constraint anti-solape). Serializa con un
+--     advisory lock por (negocio, fecha, hora, empleado), re-chequea con la
+--     MISMA check_availability que usa el agente para consultar, y recién ahí
+--     inserta. security invoker => respeta RLS (el insert exige user_id = auth.uid()).
+--     El cliente se deduplica por TELÉFONO (la llave real en WhatsApp), a
+--     diferencia del alta del front que deduplica por nombre.
+-- =====================================================================
+create or replace function public.agendar_turno(
+  target_uid uuid, p_date date, p_time text, p_customer_name text,
+  p_phone text default null, p_service_id uuid default null, p_service_name text default null,
+  p_employee_id uuid default null, p_duration_min int default null, p_price numeric default null,
+  p_notes text default null, p_source text default 'web', p_save_customer boolean default true
+) returns jsonb language plpgsql security invoker as $func$
+declare
+  v_avail jsonb; v_mode text; v_available boolean; v_emp uuid := p_employee_id;
+  v_appt_id uuid; v_free jsonb; v_phone text := nullif(btrim(coalesce(p_phone,'')),'');
+begin
+  if p_customer_name is null or btrim(p_customer_name) = '' then
+    return jsonb_build_object('ok', false, 'error', 'Falta el nombre del cliente.');
+  end if;
+  if p_time !~ '^\d{1,2}:\d{2}$' then
+    return jsonb_build_object('ok', false, 'error', 'La hora tiene que ser HH:MM.');
+  end if;
+
+  -- candado: serializa reservas del mismo horario (cierra la carrera front-check -> insert)
+  perform pg_advisory_xact_lock(
+    hashtextextended(target_uid::text||'|'||p_date::text||'|'||p_time||'|'||coalesce(v_emp::text,''), 0));
+
+  -- re-chequea disponibilidad DENTRO de la transacción, con la misma RPC que usa el agente
+  v_avail := public.check_availability(target_uid => target_uid, p_date => p_date, p_time => p_time,
+    p_service_id => p_service_id, p_duration_min => p_duration_min, p_employee_id => v_emp);
+  v_mode := v_avail->>'mode';
+  v_available := coalesce((v_avail->>'available')::boolean, false);
+
+  if not v_available then
+    return jsonb_build_object('ok', false, 'error', 'Ese horario ya no está disponible.', 'disponibilidad', v_avail);
+  end if;
+
+  -- modo staff sin empleado elegido: toma el primero libre (igual que el AUTO del front)
+  if v_mode = 'staff' and v_emp is null then
+    v_free := v_avail->'free_employees';
+    if v_free is not null and jsonb_array_length(v_free) > 0 then
+      v_emp := (v_free->0->>'id')::uuid;
+    end if;
+  end if;
+
+  insert into public.appointments(
+    user_id, customer_name, phone, service_id, service_name, employee_id,
+    appt_date, appt_time, duration_min, price, notes, status, source, paid)
+  values (target_uid, btrim(p_customer_name), v_phone, p_service_id,
+    nullif(btrim(coalesce(p_service_name,'')),''), v_emp, p_date, p_time, p_duration_min, p_price,
+    nullif(btrim(coalesce(p_notes,'')),''), 'confirmado', coalesce(nullif(btrim(p_source),''),'web'), false)
+  returning id into v_appt_id;
+
+  -- guarda/actualiza cliente, dedup por TELÉFONO (la llave real en WhatsApp)
+  if p_save_customer and v_phone is not null then
+    if exists (select 1 from public.customers where user_id = target_uid and phone = v_phone) then
+      update public.customers set name = btrim(p_customer_name), updated_at = now()
+        where user_id = target_uid and phone = v_phone;
+    else
+      insert into public.customers(user_id, name, phone) values (target_uid, btrim(p_customer_name), v_phone);
+    end if;
+  end if;
+
+  return jsonb_build_object('ok', true, 'appointment_id', v_appt_id, 'empleado_id', v_emp,
+    'fecha', p_date, 'hora', p_time, 'source', coalesce(nullif(btrim(p_source),''),'web'));
+end;
+$func$;
+
+grant execute on function public.agendar_turno to authenticated, anon;

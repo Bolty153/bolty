@@ -88,6 +88,31 @@ function contextoTemporal(): { natural: string; iso: string } {
   return { natural, iso }
 }
 
+// Tabla de los PRÓXIMOS 14 DÍAS (nombre del día + fecha AAAA-MM-DD) en zona
+// horaria de Argentina. La inyectamos en el system prompt para que el agente NO
+// calcule el día de la semana de memoria (ahí es donde erraba "el lunes" -> fecha mal).
+function tablaFechas(): string {
+  // "hoy" en Argentina como AAAA-MM-DD, base para iterar sin correr el día.
+  const isoHoy = new Intl.DateTimeFormat('en-CA', {
+    timeZone: AR_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date())
+  const [y, m, d] = isoHoy.split('-').map(Number)
+  const wd = new Intl.DateTimeFormat('es-AR', { timeZone: AR_TZ, weekday: 'long' })
+  const isoFmt = new Intl.DateTimeFormat('en-CA', { timeZone: AR_TZ, year: 'numeric', month: '2-digit', day: '2-digit' })
+
+  const lines = ['REFERENCIA DE FECHAS (Argentina) — usá esto y NO calcules a mano:']
+  for (let i = 0; i < 14; i++) {
+    // Mediodía UTC + i días: Argentina es UTC-3, así que nunca cruza de día.
+    const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+    dt.setUTCDate(dt.getUTCDate() + i)
+    const dia = wd.format(dt)          // "lunes"
+    const fecha = isoFmt.format(dt)     // "2026-07-20"
+    const prefijo = i === 0 ? 'hoy ' : i === 1 ? 'mañana ' : ''
+    lines.push(`${prefijo}${dia} ${fecha}`)
+  }
+  return lines.join('\n')
+}
+
 // ── Armado del system prompt ────────────────────────────────────────────────────
 function formatHours(hours: Record<string, DayHours> | null | undefined): string {
   if (!hours || typeof hours !== 'object') return 'No cargados.'
@@ -129,11 +154,14 @@ function buildSystemPrompt(
   const t = contextoTemporal()
   parts.push(
     `CONTEXTO TEMPORAL (hora de Argentina):\n` +
-    `Hoy es ${t.natural} (hora de Argentina). En formato de fecha para las herramientas, hoy es ${t.iso}.\n` +
+    `Hoy es ${t.natural} (hora de Argentina). En formato de fecha para las herramientas, hoy es ${t.iso}.\n\n` +
+    `${tablaFechas()}\n\n` +
+    `- Para fechas relativas (hoy, mañana, el lunes, la semana que viene) usá SIEMPRE la tabla ` +
+    `REFERENCIA DE FECHAS de arriba. Nunca calcules el día de la semana de memoria.\n` +
     `- El cliente SIEMPRE habla de fechas en relativo ("hoy", "mañana", "pasado mañana", "el viernes", ` +
     `"la semana que viene", "en un rato"). NUNCA le pidas que escriba la fecha en números: traducila vos.\n` +
-    `- Convertí esas expresiones a la fecha concreta en formato AAAA-MM-DD (a partir de la fecha de hoy de ` +
-    `arriba) y usá ESA fecha en la herramienta consultar_disponibilidad.\n` +
+    `- Convertí esas expresiones a la fecha concreta en formato AAAA-MM-DD (buscándola en la tabla de ` +
+    `arriba) y usá ESA fecha en las herramientas consultar_disponibilidad y agendar_turno.\n` +
     `- Cuando confirmes o consultes algo con fecha, decísela al cliente en lenguaje natural y claro ` +
     `(ej: "para mañana martes 16") para evitar malentendidos. Nunca le muestres el formato numérico.`,
   )
@@ -210,14 +238,41 @@ function buildSystemPrompt(
     `REGLAS:\n` +
     `- Respondé siempre en español argentino (rioplatense), amable y cercano pero profesional.\n` +
     `- Usá ÚNICAMENTE datos de este contexto o de las herramientas. No inventes nada.\n` +
-    `- NO prometas ni realices acciones que todavía no podés hacer: no confirmes ni reserves turnos, no ` +
-    `tomes pagos y no cierres ventas (por ahora solo podés CONSULTAR). Si te lo piden, explicá amablemente ` +
-    `que para eso pueden contactar al negocio directamente.`,
+    `- SÍ podés agendar turnos (ver AGENDADO abajo). Lo que TODAVÍA no podés hacer: tomar pagos ni cerrar ` +
+    `ventas. Si te piden pagar o comprar, explicá amablemente que para eso pueden contactar al negocio directamente.`,
+  )
+
+  // 8.b) Agendado de turnos (la ÚNICA acción que escribe)
+  parts.push(
+    `AGENDADO DE TURNOS (podés reservar de verdad, con cuidado):\n` +
+    `- ANTES de reservar, SIEMPRE chequeá con consultar_disponibilidad que ese horario esté libre.\n` +
+    `- Juntá los datos necesarios: nombre del cliente, servicio, día y hora` +
+    (hasEmployees ? `, y con qué empleado (este negocio trabaja con empleados)` : ``) + `.\n` +
+    `- Antes de llamar a agendar_turno, REPETÍ los datos y pedí un "sí" explícito del cliente. ` +
+    `Ej: "Te agendo corte con Vero el martes 16 a las 15, ¿confirmás?".\n` +
+    `- Recién con el "sí" del cliente, llamá a agendar_turno.\n` +
+    `- Al llamar agendar_turno, si ya sabés qué servicio quiere el cliente, pasá SIEMPRE el nombre del ` +
+    `servicio en el parámetro "servicio". No agendes un turno sin servicio si el cliente ya lo eligió.\n` +
+    `- Pasá el nombre del servicio EXACTAMENTE como lo devolvió buscar_servicios. No le agregues palabras ` +
+    `como "para", "de" ni el objeto ("para auto"): solo el nombre tal cual del catálogo. Si no estás seguro ` +
+    `de cuál servicio es, preguntale al cliente antes de agendar.\n` +
+    `- Si agendar_turno devolvió ok:true, el turno está CONFIRMADO. Confirmá al cliente que quedó agendado ` +
+    `(servicio, día, hora) y ofrecé ayuda para otra cosa. NO digas que lo van a contactar para confirmar, ` +
+    `ni que "queda sujeto a confirmación": ya está.\n` +
+    `- Decí que el turno quedó agendado SOLO si la herramienta devolvió ok:true. Si devuelve ok:false ` +
+    `(ej: el horario ya se ocupó), pedí disculpas y ofrecé otros horarios volviendo a usar consultar_disponibilidad.\n` +
+    `- Nunca inventes que un turno quedó reservado sin el ok:true de la herramienta.\n` +
+    `- CLAVE: preguntar "¿te lo agendo?" NO agenda nada. Para que el turno exista tenés que EMITIR la ` +
+    `herramienta agendar_turno y esperar su ok:true. Está PROHIBIDO responder "listo", "agendado", ` +
+    `"confirmado" o "te espero" si en ESTE mismo mensaje no llamaste agendar_turno y no recibiste ok:true. ` +
+    `Cuando el cliente diga "sí", tu próxima acción es LLAMAR la herramienta, no escribir la confirmación.`,
   )
 
   // 9) Estilo de escritura (el destino final es WhatsApp)
   parts.push(
     `ESTILO DE ESCRITURA (importante, escribís para WhatsApp):\n` +
+    `- NUNCA uses asteriscos (**) ni ningún markdown. WhatsApp no los renderiza y se ven literales. ` +
+    `Escribí en texto plano: sin negritas, sin listas con guiones de markdown.\n` +
     `- NO uses markdown NUNCA: nada de ** para negrita, nada de ## títulos, nada de símbolos para dar formato. ` +
     `En WhatsApp el markdown no se renderiza y se ven los símbolos literales (queda feo). Escribí natural, sin símbolos.\n` +
     `- Si alguna vez necesitás destacar algo, como mucho usá el formato propio de WhatsApp (un solo asterisco *así*), ` +
@@ -312,6 +367,29 @@ const TOOL_BUSCAR_EMPLEADOS: AnthropicTool = {
       query: { type: 'string', description: 'Nombre (o parte) a buscar (opcional; vacío lista todo el equipo).' },
     },
     required: [],
+  },
+}
+
+// ÚNICA tool que ESCRIBE: reserva el turno de verdad en la agenda (RPC atómica
+// agendar_turno). Se ejecuta server-side con RLS. Ver reglas de uso en el system prompt.
+const TOOL_AGENDAR_TURNO: AnthropicTool = {
+  name: 'agendar_turno',
+  description:
+    'Reserva el turno DE VERDAD en la agenda. Usar SOLO después de haber chequeado disponibilidad con ' +
+    'consultar_disponibilidad Y de que el cliente confirmó los datos. No usar para consultar.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      fecha: { type: 'string', description: 'Fecha en formato AAAA-MM-DD.' },
+      hora: { type: 'string', description: 'Hora puntual HH:MM.' },
+      nombre_cliente: { type: 'string', description: 'Nombre del cliente que reserva.' },
+      telefono: { type: 'string', description: 'Teléfono del cliente (opcional).' },
+      servicio: { type: 'string', description: 'Nombre del servicio (opcional; define la duración).' },
+      empleado: { type: 'string', description: 'Nombre del empleado/profesional (opcional).' },
+      duracion_min: { type: 'number', description: 'Duración en minutos (opcional; si se omite, la toma del servicio).' },
+      notas: { type: 'string', description: 'Notas del turno (opcional).' },
+    },
+    required: ['fecha', 'hora', 'nombre_cliente'],
   },
 }
 
@@ -434,7 +512,7 @@ Deno.serve(async (req) => {
   // Solo ofrecemos las tools que tienen sentido para este negocio.
   const tools: AnthropicTool[] = []
   if (prodSummary.count > 0) tools.push(TOOL_BUSCAR_PRODUCTOS, TOOL_CONSULTAR_STOCK)
-  if (servSummary.count > 0) tools.push(TOOL_BUSCAR_SERVICIOS, TOOL_CONSULTAR_DISPONIBILIDAD)
+  if (servSummary.count > 0) tools.push(TOOL_BUSCAR_SERVICIOS, TOOL_CONSULTAR_DISPONIBILIDAD, TOOL_AGENDAR_TURNO)
   if (hasEmployees) tools.push(TOOL_BUSCAR_EMPLEADOS)
 
   // ── Ejecutores de las tools (LECTURA, con RLS por el token del usuario) ──
@@ -585,6 +663,112 @@ Deno.serve(async (req) => {
     return { tipo: 'horarios_libres', fecha, servicio: servicioNombre, empleado: empleadoNombre, resultado: data }
   }
 
+  // ── Tool que ESCRIBE: reserva el turno de verdad vía la RPC atómica agendar_turno. ──
+  // Resuelve servicio y empleado igual que consultarDisponibilidad (mismos helpers)
+  // para quedar 100% consistente con la tool que CONSULTA.
+  async function agendarTurno(input: Record<string, unknown>) {
+    console.log('[agendar_turno] input:', JSON.stringify(input))
+    const fecha = String(input?.fecha ?? '').trim()
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { ok: false, error: 'Necesito la fecha en formato AAAA-MM-DD.' }
+    const hora = String(input?.hora ?? '').trim()
+    if (!/^\d{1,2}:\d{2}$/.test(hora)) return { ok: false, error: 'La hora tiene que ser HH:MM.' }
+    const nombreCliente = String(input?.nombre_cliente ?? '').trim()
+    if (!nombreCliente) return { ok: false, error: 'Falta el nombre del cliente.' }
+
+    // Resolver servicio con match FLEXIBLE (mismo criterio que empleados): sin tildes
+    // ni mayúsculas y sacando palabras de relleno. El agente suele mandar el nombre con
+    // ruido ("lavado comun PARA auto") y el ilike exacto no matchea "lavado comun auto".
+    const STOPWORDS = ['para', 'de', 'del', 'la', 'el', 'un', 'una', 'y', 'con', 'a', 'al']
+    let serviceId: string | null = null
+    let servicioNombre: string | null = null
+    let svcDuration: number | null = null
+    let svcPrice: number | null = null
+    if (input?.servicio) {
+      const { data: svcData } = await supabase
+        .from('services').select('id, name, duration_min, price, price_on_request').eq('user_id', uid).order('name')
+      const servicios = (svcData ?? []) as { id: string; name: string; duration_min: number | null; price: number; price_on_request: boolean }[]
+      // Palabras significativas de lo que mandó el agente (sin tildes/mayúsculas ni relleno).
+      const palabras = fold(input.servicio).split(/\s+/).filter((w) => w && !STOPWORDS.includes(w))
+      // Un servicio matchea si su nombre (folded) contiene TODAS esas palabras.
+      const matches = palabras.length
+        ? servicios.filter((s) => { const n = fold(s.name); return palabras.every((w) => n.includes(w)) })
+        : []
+      if (matches.length === 1) {
+        const s = matches[0]
+        serviceId = s.id
+        servicioNombre = s.name                                 // nombre REAL del catálogo
+        svcDuration = s.duration_min
+        svcPrice = s.price_on_request ? null : s.price           // "a consultar" => sin precio
+      } else if (matches.length > 1) {
+        return {
+          ok: false,
+          ambiguo: true,
+          coincidencias: matches.map((s) => s.name),
+          nota: `Hay varios servicios que coinciden con "${input.servicio}". Preguntale al cliente cuál de ellos.`,
+        }
+      } else {
+        return {
+          ok: false,
+          nota: `No encontré un servicio llamado "${input.servicio}".`,
+          servicios_disponibles: servicios.map((s) => s.name),
+        }
+      }
+    }
+
+    // Resolver empleado (nombre -> id) con match flexible: sin tildes ni mayúsculas
+    let employeeId: string | null = null
+    if (input?.empleado) {
+      const emps = await traerEmpleadosActivos()
+      const q = fold(input.empleado)
+      const matches = emps.filter((e) => fold(e.name).includes(q))
+      if (matches.length === 0) {
+        return {
+          ok: false,
+          nota: `No encontré a "${input.empleado}" en el equipo.`,
+          equipo_disponible: emps.map((e) => e.name),
+        }
+      }
+      if (matches.length > 1) {
+        return {
+          ok: false,
+          ambiguo: true,
+          coincidencias: matches.map((e) => e.name),
+          nota: `Hay varios que coinciden con "${input.empleado}". Preguntale al cliente con cuál de ellos.`,
+        }
+      }
+      employeeId = matches[0].id
+    }
+
+    // Duración: la que mandó el agente, o (si no) la del servicio del catálogo.
+    const duracion = input?.duracion_min != null ? Number(input.duracion_min) : null
+    const durMin = (duracion != null && !isNaN(duracion) && duracion > 0) ? duracion : svcDuration
+    // Precio: el agente no lo manda; si el servicio tiene precio, lo usamos.
+    const priceNum = svcPrice
+    const telefono = input?.telefono ? String(input.telefono).trim() || null : null
+    const notas = input?.notas ? String(input.notas).trim() || null : null
+
+    console.log('[agendar_turno] servicio resuelto:', serviceId, servicioNombre, 'dur:', durMin, 'precio:', priceNum)
+
+    const { data, error } = await supabase.rpc('agendar_turno', {
+      target_uid: uid,
+      p_date: fecha,
+      p_time: hora,
+      p_customer_name: nombreCliente,
+      p_phone: telefono,
+      p_service_id: serviceId,
+      p_service_name: servicioNombre,
+      p_employee_id: employeeId,
+      p_duration_min: durMin,
+      p_price: priceNum,
+      p_notes: notas,
+      p_source: 'web',
+      p_save_customer: true,
+    })
+    console.log('[agendar_turno] rpc data:', JSON.stringify(data), 'error:', JSON.stringify(error))
+    if (error) return { ok: false, error: 'No se pudo agendar el turno.', detalle: error.message }
+    return data
+  }
+
   async function runTool(name: string, input: Record<string, unknown>): Promise<unknown> {
     try {
       switch (name) {
@@ -592,6 +776,7 @@ Deno.serve(async (req) => {
         case 'consultar_stock': return await consultarStock(input)
         case 'buscar_servicios': return await buscarServicios(input)
         case 'consultar_disponibilidad': return await consultarDisponibilidad(input)
+        case 'agendar_turno': return await agendarTurno(input)
         case 'buscar_empleados': return await buscarEmpleados(input)
         default: return { error: `Herramienta desconocida: ${name}` }
       }
@@ -606,6 +791,12 @@ Deno.serve(async (req) => {
   // de TODAS las llamadas del turno.
   const usage = { input_tokens: 0, output_tokens: 0 }
   const convo: ChatMsg[] = chatMessages.slice()
+  // ¿Se concretó una reserva REAL en este mensaje? (agendar_turno devolvió ok:true)
+  // Lo usamos para loguear y para avisarle al front, así "confirmado" deja de ser
+  // una afirmación del modelo y pasa a ser un hecho verificado por el servidor.
+  let booked = false
+  let bookedApptId: string | null = null
+  let agendarLlamada = false
   let finalData: {
     content?: { type?: string; text?: string; id?: string; name?: string; input?: unknown }[]
     stop_reason?: string
@@ -664,6 +855,11 @@ Deno.serve(async (req) => {
     const toolResults = []
     for (const tu of toolUses) {
       const result = await runTool(String(tu.name), (tu.input as Record<string, unknown>) ?? {})
+      if (tu.name === 'agendar_turno') {
+        agendarLlamada = true
+        const r = result as { ok?: boolean; appointment_id?: string }
+        if (r?.ok === true) { booked = true; bookedApptId = r.appointment_id ?? null }
+      }
       toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(result) })
     }
     convo.push({ role: 'user', content: toolResults })
@@ -678,5 +874,14 @@ Deno.serve(async (req) => {
     : ''
   if (!reply.trim()) reply = 'Perdoná, no pude completar la consulta ahora. ¿Lo intentamos de nuevo?'
 
-  return json({ reply, usage, model: MODEL, stop_reason: finalData?.stop_reason ?? null })
+  // Red de seguridad: por más que el prompt lo prohíba, si el modelo se zarpa y mete
+  // markdown de negrita (** o __), lo sacamos. WhatsApp no lo renderiza y se ve literal.
+  reply = reply.replace(/\*\*/g, '').replace(/__/g, '')
+
+  // Log inequívoco del desenlace: si el modelo dijo "confirmado" pero acá ves
+  // agendo_llamada:false, es que NUNCA llamó la tool (narró la acción). Si ves
+  // agendo_llamada:true y booked:false, la RPC rechazó (mirá el log rpc data).
+  console.log('[chat] desenlace:', JSON.stringify({ agendo_llamada: agendarLlamada, booked, appointment_id: bookedApptId }))
+
+  return json({ reply, usage, model: MODEL, stop_reason: finalData?.stop_reason ?? null, booked, appointment_id: bookedApptId })
 })
