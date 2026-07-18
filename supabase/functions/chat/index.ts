@@ -199,7 +199,11 @@ function buildSystemPrompt(
     `- NUNCA inventes un producto, precio, stock, duración ni disponibilidad. Si una herramienta no ` +
     `devuelve resultados, decí con sinceridad que no lo encontrás y ofrecé contactar al negocio` +
     `${bp?.phone?.trim() ? ` (tel: ${bp.phone.trim()})` : ''}.\n` +
-    `- Podés llamar varias herramientas si hace falta para responder bien.`,
+    `- Podés llamar varias herramientas si hace falta para responder bien.\n` +
+    `- Cuando el cliente pregunta qué incluye un servicio/producto o la diferencia entre dos, usá SIEMPRE el ` +
+    `campo "descripcion" que te devuelve la herramienta. Si la descripción existe, respondé con eso. NUNCA ` +
+    `digas que no tenés los detalles si la herramienta te devolvió una descripción, y NUNCA derives al ` +
+    `teléfono del negocio para "consultar detalles".`,
   )
 
   // 5.b) Equipo / empleados (solo si el negocio trabaja con empleados)
@@ -239,7 +243,21 @@ function buildSystemPrompt(
     `- Respondé siempre en español argentino (rioplatense), amable y cercano pero profesional.\n` +
     `- Usá ÚNICAMENTE datos de este contexto o de las herramientas. No inventes nada.\n` +
     `- SÍ podés agendar turnos (ver AGENDADO abajo). Lo que TODAVÍA no podés hacer: tomar pagos ni cerrar ` +
-    `ventas. Si te piden pagar o comprar, explicá amablemente que para eso pueden contactar al negocio directamente.`,
+    `ventas de productos (ver VENTAS Y COMPRAS abajo).`,
+  )
+
+  // 8.a) Ventas y compras de productos (todavía no hay tool para cerrar la venta)
+  parts.push(
+    `VENTAS Y COMPRAS DE PRODUCTOS:\n` +
+    `- Vos SOS el canal de atención del negocio. NUNCA le digas al cliente que llame, escriba o contacte al ` +
+    `negocio por teléfono ni por otro canal: ya está hablando con el negocio a través tuyo. Nunca des un ` +
+    `número de teléfono para "coordinar la compra" ni para "consultar detalles".\n` +
+    `- NUNCA inventes cómo se compra, se retira o se entrega un producto (retiro en el local, envío a ` +
+    `domicilio, dirección de retiro, medios de pago). Que el negocio tenga una dirección NO significa que se ` +
+    `pueda retirar ahí. No lo asumas.\n` +
+    `- Por ahora NO tenés una herramienta para cerrar la venta de un producto. Cuando el cliente quiere ` +
+    `comprar: confirmá producto, precio y disponibilidad, decile que tomás nota de su pedido, y ofrecé seguir ` +
+    `ayudando. Corto, sin inventar formas de pago ni de entrega.`,
   )
 
   // 8.b) Agendado de turnos (la ÚNICA acción que escribe)
@@ -518,14 +536,14 @@ Deno.serve(async (req) => {
   // ── Ejecutores de las tools (LECTURA, con RLS por el token del usuario) ──
   async function buscarProductos(input: Record<string, unknown>) {
     const query = safeText(input?.query)
-    let q = supabase.from('products').select('name, price, stock, category').eq('user_id', uid).order('name').limit(10)
+    let q = supabase.from('products').select('name, price, stock, category, description').eq('user_id', uid).order('name').limit(10)
     if (query) q = q.or(`name.ilike.%${query}%,category.ilike.%${query}%,description.ilike.%${query}%`)
     if (input?.categoria) q = q.ilike('category', `%${safeText(input.categoria)}%`)
     const { data, error } = await q
     if (error) return { error: 'No se pudo buscar productos.' }
     const resultados = (data ?? []).map((p) => {
-      const x = p as { name: string; price: number; stock: number; category: string | null }
-      return { nombre: x.name, precio: x.price, stock: x.stock, categoria: x.category }
+      const x = p as { name: string; price: number; stock: number; category: string | null; description: string | null }
+      return { nombre: x.name, precio: x.price, stock: x.stock, categoria: x.category, descripcion: x.description }
     })
     return resultados.length ? { resultados } : { resultados: [], nota: 'No se encontraron productos con esa búsqueda.' }
   }
@@ -534,29 +552,30 @@ Deno.serve(async (req) => {
     const nombre = safeText(input?.nombre_producto)
     if (!nombre) return { error: 'Falta el nombre del producto.' }
     const { data, error } = await supabase
-      .from('products').select('name, stock, price').eq('user_id', uid).ilike('name', `%${nombre}%`).order('name').limit(5)
+      .from('products').select('name, stock, price, description').eq('user_id', uid).ilike('name', `%${nombre}%`).order('name').limit(5)
     if (error) return { error: 'No se pudo consultar el stock.' }
     if (!data || !data.length) return { encontrado: false, nota: `No encontré un producto llamado "${input?.nombre_producto}".` }
     return {
       encontrado: true,
-      resultados: (data as { name: string; stock: number; price: number }[]).map((p) => ({ nombre: p.name, stock: p.stock, precio: p.price })),
+      resultados: (data as { name: string; stock: number; price: number; description: string | null }[]).map((p) => ({ nombre: p.name, stock: p.stock, precio: p.price, descripcion: p.description })),
     }
   }
 
   async function buscarServicios(input: Record<string, unknown>) {
     const query = safeText(input?.query)
-    let q = supabase.from('services').select('name, price, price_on_request, duration_min, category').eq('user_id', uid).order('name').limit(15)
+    let q = supabase.from('services').select('name, price, price_on_request, duration_min, category, description').eq('user_id', uid).order('name').limit(15)
     if (query) q = q.or(`name.ilike.%${query}%,category.ilike.%${query}%,description.ilike.%${query}%`)
     if (input?.categoria) q = q.ilike('category', `%${safeText(input.categoria)}%`)
     const { data, error } = await q
     if (error) return { error: 'No se pudo buscar servicios.' }
     const resultados = (data ?? []).map((s) => {
-      const x = s as { name: string; price: number; price_on_request: boolean; duration_min: number | null; category: string | null }
+      const x = s as { name: string; price: number; price_on_request: boolean; duration_min: number | null; category: string | null; description: string | null }
       return {
         nombre: x.name,
         precio: x.price_on_request ? 'a consultar' : x.price,
         duracion_min: x.duration_min,
         categoria: x.category,
+        descripcion: x.description,
       }
     })
     return resultados.length ? { resultados } : { resultados: [], nota: 'No se encontraron servicios.' }
