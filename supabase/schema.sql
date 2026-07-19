@@ -1452,3 +1452,69 @@ end;
 $func$;
 
 grant execute on function public.agendar_turno to authenticated, anon;
+
+-- =====================================================================
+-- 27. CONSUMO DE TOKENS / COSTO POR CLIENTE
+--     Medir cuánto cuesta en API cada negocio. La materia prima ya existe:
+--     messages guarda tokens_in/tokens_out por mensaje, atados a user_id y
+--     conversation_id. Acá sumamos lo que falta: (a) con qué MODELO se generó
+--     cada mensaje, (b) una tabla de PRECIOS por modelo (USD por millón de
+--     tokens) como única fuente de verdad, y (c) una VISTA que suma tokens y
+--     costo por cliente y por mes.
+--     Aditivo: no toca ninguna tabla existente salvo sumar una columna a messages.
+-- =====================================================================
+
+-- (a) Con qué modelo se generó cada mensaje. Hoy todos son claude-haiku-4-5,
+--     pero guardarlo por fila deja el costeo correcto si mañana cambia el modelo.
+alter table public.messages add column if not exists model text;
+
+-- (b) Precios por modelo — USD por millón de tokens (MTok). Única fuente de
+--     verdad, editable SOLO por admin. Los valores son placeholders: ajustalos
+--     al precio real de la lista de Anthropic cuando lo confirmes.
+create table if not exists public.model_prices (
+  model            text primary key,
+  input_per_mtok   numeric(12,4) not null,
+  output_per_mtok  numeric(12,4) not null,
+  updated_at       timestamptz not null default now()
+);
+
+insert into public.model_prices (model, input_per_mtok, output_per_mtok)
+values ('claude-haiku-4-5', 1.00, 5.00)
+on conflict (model) do nothing;
+
+alter table public.model_prices enable row level security;
+
+-- Lectura: cualquier usuario autenticado (la vista de costo la necesita para el join).
+drop policy if exists "model_prices_read" on public.model_prices;
+create policy "model_prices_read" on public.model_prices
+  for select using (auth.role() = 'authenticated');
+
+-- Escritura (insert/update/delete): SOLO admin. Misma función admin que el resto del schema.
+drop policy if exists "model_prices_admin_write" on public.model_prices;
+create policy "model_prices_admin_write" on public.model_prices
+  for all using (public.is_current_user_admin()) with check (public.is_current_user_admin());
+
+grant select, insert, update, delete on public.model_prices to authenticated;
+
+-- (c) Vista: tokens y costo por cliente y por mes.
+--     CLAVE — security_invoker = on: sin esto la vista correría con los permisos
+--     del DUEÑO (postgres), que SALTEA RLS, y cualquier autenticado vería el
+--     consumo de TODOS los negocios. Con invoker on la vista se ejecuta con los
+--     permisos de QUIEN consulta, así hereda la RLS de messages: cada cliente ve
+--     solo lo suyo y el admin ve todo (por la policy messages_admin_all).
+--     Requiere Postgres 15+ (Supabase ya lo cumple).
+create or replace view public.token_usage_by_client
+with (security_invoker = on) as
+select
+  m.user_id,
+  date_trunc('month', m.created_at)::date as month,
+  coalesce(m.model, 'claude-haiku-4-5') as model,
+  sum(coalesce(m.tokens_in,0))  as tokens_in,
+  sum(coalesce(m.tokens_out,0)) as tokens_out,
+  round(sum(coalesce(m.tokens_in,0))::numeric  / 1000000 * coalesce(p.input_per_mtok, 1.00), 4)
+    + round(sum(coalesce(m.tokens_out,0))::numeric / 1000000 * coalesce(p.output_per_mtok, 5.00), 4) as cost_usd
+from public.messages m
+left join public.model_prices p on p.model = coalesce(m.model, 'claude-haiku-4-5')
+group by m.user_id, date_trunc('month', m.created_at), m.model, p.input_per_mtok, p.output_per_mtok;
+
+grant select on public.token_usage_by_client to authenticated;

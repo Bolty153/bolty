@@ -14,6 +14,17 @@ interface ClientRow extends Client {
   is_active: boolean
 }
 
+// Consumo del mes de un cliente (tokens + costo en USD ya calculado por la vista).
+interface ClientUsage {
+  tokens_in: number
+  tokens_out: number
+  cost_usd: number
+}
+// Fila cruda de la vista token_usage_by_client (una por user_id + mes + modelo).
+interface UsageRow extends ClientUsage {
+  user_id: string
+}
+
 const EMPTY_FORM = {
   email: '', password: '', business_name: '', whatsapp: '',
   // Default: inactivo → el admin activa cuando confirma el pago
@@ -23,6 +34,9 @@ const EMPTY_FORM = {
 export default function AdminClientes({ onImpersonate, access }: Props) {
   const [clients, setClients]       = useState<ClientRow[]>([])
   const [plans, setPlans]           = useState<Plan[]>([])
+  // Consumo del mes actual por cliente (vista token_usage_by_client, ya costeada).
+  // Mapa user_id -> tokens y costo en USD del mes en curso.
+  const [usage, setUsage]           = useState<Record<string, ClientUsage>>({})
   const [loading, setLoading]       = useState(true)
   const [search, setSearch]         = useState('')
   const [filter, setFilter]         = useState<'all' | Client['status']>('all')
@@ -45,10 +59,28 @@ export default function AdminClientes({ onImpersonate, access }: Props) {
   const [accessMinutes, setAccessMinutes] = useState(30)
 
   async function load() {
-    const [{ data: cl }, { data: pl }] = await Promise.all([
+    // Primer día del mes en curso, en el mismo formato que devuelve la vista
+    // (month = date_trunc('month', created_at)::date, ej. '2026-07-01').
+    const now = new Date()
+    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+
+    const [{ data: cl }, { data: pl }, { data: usageRows }] = await Promise.all([
       supabase.from('clients').select('*, plan:plans(id,name,price_ars,description)').order('created_at', { ascending: false }),
       supabase.from('plans').select('*').order('price_ars'),
+      // La vista respeta la RLS de messages (security_invoker): el admin ve el de todos.
+      supabase.from('token_usage_by_client').select('user_id, tokens_in, tokens_out, cost_usd').eq('month', monthKey),
     ])
+
+    // Sumamos por cliente (una fila por modelo → las juntamos en un total del mes).
+    const usageMap: Record<string, ClientUsage> = {}
+    for (const r of (usageRows || []) as UsageRow[]) {
+      const cur = usageMap[r.user_id] || { tokens_in: 0, tokens_out: 0, cost_usd: 0 }
+      cur.tokens_in  += Number(r.tokens_in)  || 0
+      cur.tokens_out += Number(r.tokens_out) || 0
+      cur.cost_usd   += Number(r.cost_usd)   || 0
+      usageMap[r.user_id] = cur
+    }
+    setUsage(usageMap)
 
     // Cargamos is_active real desde profiles para cada cliente
     const ids = (cl || []).map(c => c.id)
@@ -77,6 +109,18 @@ export default function AdminClientes({ onImpersonate, access }: Props) {
   }
 
   useEffect(() => { load() }, [])
+
+  // Total del mes: suma del consumo de TODOS los clientes (para el KPI de arriba).
+  const totalUsage = Object.values(usage).reduce<ClientUsage>(
+    (acc, u) => ({
+      tokens_in:  acc.tokens_in  + u.tokens_in,
+      tokens_out: acc.tokens_out + u.tokens_out,
+      cost_usd:   acc.cost_usd   + u.cost_usd,
+    }),
+    { tokens_in: 0, tokens_out: 0, cost_usd: 0 },
+  )
+  // Nombre del mes en curso (ej: "julio 2026") para rotular el KPI.
+  const monthLabel = new Date().toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
 
   const visible = clients.filter(c => {
     const matchSearch = !search ||
@@ -420,6 +464,22 @@ export default function AdminClientes({ onImpersonate, access }: Props) {
         </div>
       )}
 
+      {/* KPI: costo total de API del mes (todos los clientes juntos). */}
+      <div className="adm-sect" style={{ display: 'flex', alignItems: 'baseline', gap: 20, flexWrap: 'wrap', marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--ink-faint)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 }}>
+            Consumo de API · {monthLabel}
+          </div>
+          <div style={{ fontSize: 26, fontWeight: 700, fontFamily: 'Space Grotesk, sans-serif' }}>
+            {fmtUsd(totalUsage.cost_usd)}
+          </div>
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--ink-soft)' }}>
+          {fmtTokens(totalUsage.tokens_in)} tokens in · {fmtTokens(totalUsage.tokens_out)} tokens out
+          <span style={{ color: 'var(--ink-faint)' }}> · {clients.length} cliente{clients.length === 1 ? '' : 's'}</span>
+        </div>
+      </div>
+
       <div className="adm-toolbar">
         <input className="adm-search" placeholder="Buscar por nombre o email…" value={search} onChange={e => setSearch(e.target.value)} />
         {(['all', 'active', 'trial', 'inactive', 'suspended'] as const).map(f => (
@@ -437,6 +497,7 @@ export default function AdminClientes({ onImpersonate, access }: Props) {
                 <tr>
                   <th>Negocio / Email</th>
                   <th>Plan</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Consumo del mes</th>
                   <th style={{ whiteSpace: 'nowrap' }}>Acceso al dashboard</th>
                   <th>Estado</th>
                   <th>Vence</th>
@@ -445,7 +506,7 @@ export default function AdminClientes({ onImpersonate, access }: Props) {
               </thead>
               <tbody>
                 {visible.length === 0 && (
-                  <tr><td colSpan={6} className="adm-empty">Sin resultados.</td></tr>
+                  <tr><td colSpan={7} className="adm-empty">Sin resultados.</td></tr>
                 )}
                 {visible.map(c => {
                   const isUpdating = updatingId === c.id
@@ -457,6 +518,24 @@ export default function AdminClientes({ onImpersonate, access }: Props) {
                       </td>
                       <td data-label="Plan" style={{ fontSize: 13 }}>
                         {c.plan?.name || <span style={{ color: 'var(--ink-faint)' }}>Sin plan</span>}
+                      </td>
+
+                      {/* ── Consumo del mes: costo en USD + desglose de tokens ── */}
+                      <td data-label="Consumo del mes" style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
+                        {(() => {
+                          const u = usage[c.id] || { tokens_in: 0, tokens_out: 0, cost_usd: 0 }
+                          const sinConsumo = u.tokens_in === 0 && u.tokens_out === 0
+                          return (
+                            <>
+                              <div style={{ fontWeight: 600, color: sinConsumo ? 'var(--ink-faint)' : undefined }}>
+                                {fmtUsd(u.cost_usd)}
+                              </div>
+                              <div style={{ color: 'var(--ink-soft)', fontSize: 12 }}>
+                                {fmtTokens(u.tokens_in)} in · {fmtTokens(u.tokens_out)} out
+                              </div>
+                            </>
+                          )
+                        })()}
                       </td>
 
                       {/* ── Columna de acceso: el toggle principal ── */}
@@ -602,6 +681,19 @@ export default function AdminClientes({ onImpersonate, access }: Props) {
 
 function isPastDue(c: ClientRow) {
   return !!c.paid_until && new Date(c.paid_until) < new Date() && c.is_active
+}
+
+// Costo en USD con 2 a 4 decimales (el consumo mensual suele ser chico). 0 → "$0.00".
+function fmtUsd(n: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency', currency: 'USD',
+    minimumFractionDigits: 2, maximumFractionDigits: 4,
+  }).format(n || 0)
+}
+
+// Tokens con separador de miles (es-AR: punto). 0 → "0".
+function fmtTokens(n: number): string {
+  return (n || 0).toLocaleString('es-AR')
 }
 
 // Contraseña aleatoria legible (sin caracteres confusos: l, 1, I, O, 0).

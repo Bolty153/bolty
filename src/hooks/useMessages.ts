@@ -17,6 +17,7 @@ export interface Message {
   content: string
   tokens_in: number | null
   tokens_out: number | null
+  model: string | null
   created_at: string
 }
 
@@ -89,7 +90,7 @@ export function useMessages(conversationId: string | null, mode: ConvMode) {
   // Inserta un mensaje, lo agrega al estado (dedupe con Realtime) y "toca" la
   // conversación para que suba en la lista del inbox.
   const insertMessage = useCallback(
-    async (role: MsgRole, content: string, tokensIn: number | null = null, tokensOut: number | null = null) => {
+    async (role: MsgRole, content: string, tokensIn: number | null = null, tokensOut: number | null = null, model: string | null = null) => {
       if (!conversationId || !userId) return null
       const { data, error: e } = await supabase
         .from('messages')
@@ -100,6 +101,7 @@ export function useMessages(conversationId: string | null, mode: ConvMode) {
           content,
           tokens_in: tokensIn,
           tokens_out: tokensOut,
+          model,
         })
         .select()
         .single()
@@ -150,8 +152,11 @@ export function useMessages(conversationId: string | null, mode: ConvMode) {
 
       const reply: string = data?.reply ?? ''
       const usage = data?.usage ?? { input_tokens: 0, output_tokens: 0 }
+      // Modelo con el que se generó la respuesta (lo devuelve la función chat).
+      // Lo guardamos por mensaje para poder costear con el precio correcto.
+      const model: string | null = typeof data?.model === 'string' ? data.model : null
       if (reply.trim()) {
-        await insertMessage('agent', reply, usage.input_tokens ?? null, usage.output_tokens ?? null)
+        await insertMessage('agent', reply, usage.input_tokens ?? null, usage.output_tokens ?? null, model)
       }
       setAgentThinking(false)
     },
